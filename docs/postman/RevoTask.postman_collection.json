@@ -1,0 +1,152 @@
+{
+  "info": {
+    "name": "RevoTask API",
+    "description": "Verifies the deployed Flask API (R27.3): health, register, login, then one request per Blueprint. Set {{baseUrl}} in the environment to the Railway URL. Run the folders in order; tests store the token and ids for later requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Envelope has exactly data or error', function () {",
+          "  const body = pm.response.json();",
+          "  const keys = Object.keys(body);",
+          "  pm.expect(keys.length).to.eql(1);",
+          "  pm.expect(['data', 'error']).to.include(keys[0]);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health",
+      "item": [
+        {
+          "name": "GET /api/health",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('status ok', () => pm.expect(pm.response.json().data.status).to.eql('ok'));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/health" }
+        }
+      ]
+    },
+    {
+      "name": "1. auth",
+      "item": [
+        {
+          "name": "POST /api/auth/register",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "pm.environment.set('email', `postman+${Date.now()}@revotask.test`);"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "pm.test('no password in response', () => pm.expect(pm.response.json().data).to.not.have.property('password_hash'));"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Check\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}" },
+            "url": "{{baseUrl}}/api/auth/register"
+          }
+        },
+        {
+          "name": "POST /api/auth/login",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const data = pm.response.json().data;",
+            "pm.test('token and expiry', () => { pm.expect(data.token).to.be.a('string'); pm.expect(data.expires_at).to.be.a('string'); });",
+            "pm.environment.set('token', data.token);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. One request per Blueprint",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "users: GET /api/users/me",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/users/me" }
+        },
+        {
+          "name": "boards: POST /api/boards",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "pm.environment.set('boardId', pm.response.json().data.id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"name\": \"Postman board\" }" },
+            "url": "{{baseUrl}}/api/boards"
+          }
+        },
+        {
+          "name": "columns: POST /api/boards/:id/columns",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "pm.environment.set('columnId', pm.response.json().data.id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"name\": \"To do\" }" },
+            "url": "{{baseUrl}}/api/boards/{{boardId}}/columns"
+          }
+        },
+        {
+          "name": "cards: POST /api/columns/:id/cards",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "pm.environment.set('cardId', pm.response.json().data.id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"title\": \"Check the deployment\" }" },
+            "url": "{{baseUrl}}/api/columns/{{columnId}}/cards"
+          }
+        },
+        {
+          "name": "comments: POST /api/cards/:id/comments",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"text\": \"Deployed and reachable.\" }" },
+            "url": "{{baseUrl}}/api/cards/{{cardId}}/comments"
+          }
+        },
+        {
+          "name": "notifications: GET /api/notifications",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('paginated', () => pm.expect(pm.response.json().data).to.have.property('unread_count'));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/notifications?page=1&per_page=10" }
+        },
+        {
+          "name": "analytics: GET /api/boards/:id/analytics",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('cards per column', () => pm.expect(pm.response.json().data.cards_per_column).to.be.an('array'));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/boards/{{boardId}}/analytics" }
+        }
+      ]
+    }
+  ]
+}
