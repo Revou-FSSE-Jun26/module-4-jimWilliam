@@ -31,7 +31,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 - **JWT**: The JSON Web Token issued at login and sent as a Bearer token.
 - **AuthContext**: The React context that holds the JWT and the current User on the Frontend.
 - **Session_Cookie**: The `revotask_token` cookie that holds the JWT so that Server Components and the Middleware can read it and the session survives a page reload.
-- **Middleware**: The Next.js `middleware.ts` route guard that runs before protected pages render.
+- **Middleware**: The Next.js route guard that runs before protected pages render (`proxy.ts` in Next.js 16, formerly `middleware.ts`).
 - **ApiError**: The typed error class in `lib/errors.ts`, thrown by `lib/apiClient.ts`, with the fields `statusCode` and `message`.
 - **apiClient**: The typed fetch wrapper in `lib/apiClient.ts`.
 - **CardDetailModal**: The Frontend component that composes CommentList inside BaseModal.

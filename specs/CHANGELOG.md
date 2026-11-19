@@ -132,6 +132,27 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Why:** no table records who updated a Card, so `cards_updated` could not be computed without adding an audit log, which is out of scope.
 - **Refinement prompt:** "activity_per_member.cards_updated needs an updated_by field that the model does not have. Replace it with a metric the schema supports and document the change."
 
+### 16. The spec targeted an older Next.js (Major)
+
+- **Before (design layout, R12.6 glossary, task 15.3):** a `middleware.ts` route guard, and nothing about Next.js caching.
+- **After:** the guard is `proxy.ts` (Next.js 16 renamed `middleware.ts`), and `next.config.ts` turns off `cacheComponents` and `partialPrefetching`, which `create-next-app` 16.4 enables by default.
+- **Why:** checked against the current docs (Context7 and the docs bundled in `node_modules/next/dist/docs`). With Cache Components on, reading `cookies()` outside a `<Suspense>` boundary is a build error, yet the root layout must read the session and appearance cookies so a reload stays signed in (R32.2) and the first paint has the right theme (R36.6). Every RevoTask page is per-user data, so there is nothing to cache.
+- **Refinement prompt:** "Check the design against Next.js 16.4: replace middleware.ts with proxy.ts, and decide whether Cache Components fits pages that read the session cookie in the root layout."
+
+### 17. View Transitions through React instead of a custom helper (Minor)
+
+- **Before (design "Motion specification", task 15.18):** a `lib/viewTransition.ts` helper calling `document.startViewTransition(() => flushSync(update))`.
+- **After:** React 19.3's `<ViewTransition>` with `name` and `share`. Next.js navigations are already transitions, so the nav pill glides with no extra code, and card moves update state inside `startTransition`.
+- **Why:** the Next.js 16 view-transitions guide documents this as the supported integration. `flushSync` inside `startViewTransition` fights React's own scheduling, and the declarative version is less code with the same fallback (no animation where unsupported).
+- **Refinement prompt:** "Use React's <ViewTransition> for the nav pill glide and card moves instead of a hand-written startViewTransition helper."
+
+### 18. Token contrast failed its own test (Major, accessibility)
+
+- **Before (design token tables):** dark muted text `#B9D3CC`, dark error text `#FF9AA8`, pane fill alpha `.55`, pebble tint `.16`, light sea glass `#2E7D74`.
+- **After:** muted `#C7DED8`, error text `#FFC2CA`, pane alpha `.60`, pebble tint `.12`, light sea glass `#236B63`.
+- **Why:** the Property 37 test (`__tests__/tokens.test.ts`) composites each fill over the brightest point of the background. Muted text on a pebble measured 4.00:1 and error text on a pebble 3.15:1, both below the 4.5:1 that R34.6 requires. All 30 checked pairs now pass in both themes.
+- **Refinement prompt:** "Run the token contrast test against the worst-case background and adjust the failing text colors and glass alphas until every pair meets 4.5:1 (text) and 3:1 (UI)."
+
 ---
 
 ## v4 — Template for the next round

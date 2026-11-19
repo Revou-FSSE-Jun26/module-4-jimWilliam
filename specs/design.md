@@ -19,7 +19,7 @@ Key design decisions:
 | Layering | `app/blueprints/<name>/routes.py` → `service.py` → models; `schema.py` for validation | R11.1, R11.2, R11.4. Matches the folder paths in the brief and rubric. |
 | Access control | `board_members` table with role `admin` or `member`; one helper `require_member(board_id, user_id, admin=False)` | R31. The brief names two roles (members and administrators); ownership alone cannot express them. |
 | Auth state on Frontend | JWT in an `HttpOnly` Session_Cookie set by a Server Action, mirrored into AuthContext by the root layout | R32. Server Components (/ and /boards/[id]) need the JWT on the server, and the Kanban reload check (R14.6, R26.3 step 7) needs the session to survive a reload. Never written to localStorage (R21.8). |
-| Route guard | Next.js `middleware.ts` reading the Session_Cookie | R12.6, R32.6. Redirects before render, so protected pages never flash. |
+| Route guard | Next.js 16 `proxy.ts` (formerly `middleware.ts`) reading the Session_Cookie | R12.6, R32.6. Redirects before render, so protected pages never flash. |
 | Drag and drop | Native HTML5 events, optimistic update, plus a Move_Control that reuses the same move function | R15, R33. HTML5 drag events do not fire on touch screens, so the Move_Control keeps card moves usable on mobile (R27.5). |
 | Visual language | "Sea glass" glassmorphism: three surface levels, one curved Sidebar as the signature element, native platform primitives (`<dialog>`, `popover`, View Transitions, `@starting-style`) with fallbacks | R34–R39. Native primitives give focus handling, top-layer rendering and Escape for free; see "UI/UX Design System". |
 
@@ -67,7 +67,7 @@ Frontend layout (Next.js App Router, no `src/` folder so `components/shared/`, `
 
 ```
 frontend/
-  middleware.ts                # route guard (R12.6, R32.6)
+  proxy.ts                     # route guard (R12.6, R32.6); Next.js 16 renamed middleware.ts
   app/
     globals.css                # Design_Tokens (@theme), themes, glass utilities, fallbacks, motion
     fonts.ts                   # next/font: Fraunces (headings), Figtree (UI)
@@ -248,7 +248,7 @@ Session (R32). The JWT lives in one place that both the server and the browser c
 1. `/login` calls B2 through apiClient. On success it calls the `createSession(token, expiresAt)` Server Action (`app/actions/session.ts`), which runs `cookies().set("revotask_token", token, { httpOnly: true, secure: true, sameSite: "lax", path: "/", expires })`, then sets AuthContext and calls `router.replace("/")`.
 2. `app/layout.tsx` (server) reads the cookie with `cookies()`, calls B24 with it and passes `{ token, user }` to `<AuthProvider initial={...}>`. A reload therefore restores the session (R32.2, R32.3), and Client Components still send `Authorization: Bearer` straight to Flask.
 3. Server Components P3 and P4 read the cookie through `lib/session.ts#getToken()` and call apiClient with `API_BASE_URL` (R32.4).
-4. `middleware.ts` decodes the JWT payload (no signature check; Flask verifies the signature on every call) and compares `exp` with the current time to decide redirects (R12.6, R32.6).
+4. `proxy.ts` decodes the JWT payload (no signature check; Flask verifies the signature on every call) and compares `exp` with the current time to decide redirects (R12.6, R32.6).
 5. `logout()` in AuthContext calls `deleteSession()`, clears state (which stops `useNotifications`) and calls `router.replace("/login")` (R32.5). `useErrorHandler` calls the same `logout()` on 401.
 
 `HttpOnly` keeps scripts from reading the cookie, but the token is still handed to the client through AuthContext so that the browser can call Flask directly (the brief requires `NEXT_PUBLIC_API_BASE_URL` for Client Components). XSS can still read it from React state. This trade-off is accepted and recorded in `/guidelines/frontend.md`.
@@ -299,7 +299,7 @@ Defined once in `app/globals.css` with Tailwind v4 `@theme` (R34.1). Components 
 |---|---|---|---|
 | `--color-abyss` | `#0E2A33` | `#DCEFEA` | App_Background base |
 | `--color-tide` | `#1F5C63` | `#A9D6CF` | Background light pools, secondary fills |
-| `--color-seaglass` | `#9FD8CB` | `#2E7D74` | Primary action fill, current-page rim, links |
+| `--color-seaglass` | `#9FD8CB` | `#236B63` | Primary action fill, current-page rim, links |
 | `--color-foam` | `#EEF6F2` | `#0E2A33` | Body text and icons |
 | `--color-buoy` | `#F2B33D` | `#9A6400` | Accent: unread badge, unsaved indicator, "in progress" |
 | `--color-signal` | `#E5566B` | `#B42840` | Destructive actions and errors |
@@ -309,9 +309,9 @@ Defined once in `app/globals.css` with Tailwind v4 `@theme` (R34.1). Components 
 
 | Level | Used for | Translucent fill (dark / light) | Blur | Opaque fallback (dark / light) |
 |---|---|---|---|---|
-| Glass_Pane | Sidebar, Top_Bar, Columns, Board tiles, profile hero | `rgb(14 42 51 / .55)` / `rgb(255 255 255 / .55)` | `blur(20px) saturate(140%)` | `#163A44` / `#F2F8F6` |
+| Glass_Pane | Sidebar, Top_Bar, Columns, Board tiles, profile hero | `rgb(14 42 51 / .60)` / `rgb(255 255 255 / .55)` | `blur(20px) saturate(140%)` | `#163A44` / `#F2F8F6` |
 | Glass_Raised | BaseModal, popovers, menus, toasts | `rgb(14 42 51 / .72)` / `rgb(255 255 255 / .74)` | `blur(28px) saturate(160%)` | `#1A434E` / `#FFFFFF` |
-| Glass_Pebble | Cards, inputs, chips, comment bubbles | gradient `rgb(159 216 203 / .16)` → `rgb(159 216 203 / .06)` at 160deg / `rgb(255 255 255 / .78)` → `rgb(255 255 255 / .6)` | none | `#1E4B55` / `#FFFFFF` |
+| Glass_Pebble | Cards, inputs, chips, comment bubbles | gradient `rgb(159 216 203 / .12)` → `rgb(159 216 203 / .05)` at 160deg / `rgb(255 255 255 / .78)` → `rgb(255 255 255 / .6)` | none | `#1E4B55` / `#FFFFFF` |
 
 Every glass surface also has a 1 px rim (`--glass-rim`: `rgb(238 246 242 / .14)` dark, `rgb(14 42 51 / .12)` light), an inner top highlight (`inset 0 1px 0 rgb(255 255 255 / .22)`), and a `::before` sheen: a soft radial gradient from the top-start corner, as if light were bending through curved glass. A Glass_Pebble never blurs, because a `backdrop-filter` inside another `backdrop-filter` element only samples its parent and doubles the GPU cost (R34.3).
 
@@ -523,7 +523,7 @@ The menu follows the popup menu pattern (R36.2–R36.4):
 | Menu, flyout, bell panel (R37.4) | opacity, translate -0.25rem → 0 from the trigger side | 100 ms open, 150 ms close | same; `transform-origin` at the corner touching the trigger | fade |
 | Hover lift (R37.5) | translate, `::after` opacity, highlight | `--dur-quick` | transition | shadow and highlight only, no translate |
 | Press (R37.6) | scale | `--dur-press` | `:active` | fill darkens instead of scaling |
-| Card moved with Move_Control (R37.7) | card morphs to its new slot | 400 ms spring | `withViewTransition`, temporary `view-transition-name: card-move` | instant, focus still moves |
+| Card moved with Move_Control (R37.7) | card morphs to its new slot | 400 ms | React `<ViewTransition name="card-<id>" share="morph">`, state update inside `startTransition` | instant, focus still moves |
 | Card opens CardDetailModal (R37.7) | card morphs into the modal panel | 300 ms | temporary `view-transition-name: card-focus` on the card, then on the dialog | modal fade only |
 | Card dragged (R37.8) | dragged card `scale: 1.03; rotate: 1.5deg`; drop placeholder grows in; target Column rim brightens | `--dur-quick` | classes set on `dragstart` / `dragover` / `dragleave` | no scale or rotate; placeholder and rim only |
 | Route change (R37.9) | current-page pill glides | 300 ms | `view-transition-name: nav-current` | instant |
@@ -540,24 +540,7 @@ Rules applied everywhere:
 - Exit animations come from the transition to the closed state; `@starting-style` is used for entries only. Removing an element (deleting a Card or Comment) first sets `hidden` (or `data-closing` where `display` cannot transition), waits for `getAnimations()` to settle with a 2-second failsafe, then removes it from state.
 - Nothing flashes more than three times per second (R37.12). The loading skeleton shimmer runs for less than 5 seconds and is static under reduced motion.
 
-`lib/viewTransition.ts`:
-
-```ts
-import { flushSync } from "react-dom";
-
-export function withViewTransition(update: () => void, focusTarget?: () => HTMLElement | null) {
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!document.startViewTransition || reduce) {
-    update();
-    focusTarget?.()?.focus();
-    return;
-  }
-  const transition = document.startViewTransition(() => flushSync(update));
-  transition.finished.finally(() => focusTarget?.()?.focus()); // focus routing after the morph
-}
-```
-
-`flushSync` makes React commit inside the transition callback, so the browser captures the new state. Temporary `view-transition-name` values are set just before the call and removed when `finished` resolves, so only one element carries each name at a time.
+View Transitions use React 19.3's `<ViewTransition>` (v3 entry 17). Next.js route navigations are already transitions, so the Nav_Tree's current-page pill (`<ViewTransition name="nav-current-<shell>" share="glide">`) glides on every navigation without extra code. Each Card is wrapped in `<ViewTransition name="card-<id>" share="morph" default="none">`; `moveCard` applies its optimistic state inside `startTransition`, so a moved card morphs to its new slot. After a Move_Control move, focus follows the card to the Move_Control in its new column. Under reduced motion the `::view-transition-*` animations are switched off in CSS.
 
 ### Page designs
 
@@ -579,7 +562,7 @@ Policy: Baseline Widely available features are used freely. Newly available and 
 | CSS anchor positioning | Limited availability | Anchored rules inside `@supports (position-area: block-end)`; otherwise position from `getBoundingClientRect()` in the `toggle` handler with `position: fixed` |
 | `focusgroup` | Limited availability | When `!("focusGroup" in HTMLElement.prototype)`, add `role="menu"` / `role="menuitem"` and an Up, Down, Home, End `keydown` handler |
 | `@starting-style`, `transition-behavior` | Newly available since 2024-08-06; Firefox does not transition `display` | The `canTransitionDisplay()` probe chooses the `data-closing` exit path |
-| Same-document View Transitions | Newly available since 2025-10-14 | Update immediately and still move focus (`withViewTransition`) |
+| Same-document View Transitions | Newly available since 2025-10-14 | React's `<ViewTransition>` skips the animation and updates immediately; focus still moves to the moved card |
 | `<dialog closedby>` | Limited availability | Escape and the back gesture still close; a click-outside handler is added for `closedby="any"` where it is missing |
 | Scroll-driven animations | Newly available since 2026-10-27 | The Nav_Drawer backdrop uses a static opacity; the `IntersectionObserver` still closes the drawer |
 | `linear()` easing | Widely available | Preceded by an `ease-out` declaration anyway |
