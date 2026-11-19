@@ -1,0 +1,776 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   RevoTask design system: "Sea glass" (design.md, UI/UX Design System)
+   Values must match lib/tokens.ts (checked by __tests__/tokens.test.ts).
+   ========================================================================== */
+
+/* Tailwind utilities read theme variables, so bg-pane / text-foam switch with the theme. */
+@theme inline {
+  --color-abyss: var(--abyss);
+  --color-tide: var(--tide);
+  --color-seaglass: var(--seaglass);
+  --color-on-seaglass: var(--on-seaglass);
+  --color-foam: var(--foam);
+  --color-muted: var(--muted);
+  --color-buoy: var(--buoy);
+  --color-on-buoy: var(--on-buoy);
+  --color-danger: var(--danger-fill);
+  --color-on-danger: var(--on-danger);
+  --color-danger-text: var(--danger-text);
+  --color-rim: var(--rim);
+  --color-hover: var(--hover-tint);
+  --color-avatar-ink: #0E2A33;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --radius-shell: 2rem;
+  --radius-pane: 1.5rem;
+  --radius-pebble: 1rem;
+  --radius-pill: 999px;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --breakpoint-3xl: 120rem;
+  --breakpoint-4xl: 160rem;
+}
+
+/* ---------- Deep water (dark, default) ---------- */
+:root {
+  color-scheme: dark;
+  --abyss: #0E2A33;
+  --abyss-deep: #081B21;
+  --tide: #1F5C63;
+  --seaglass: #9FD8CB;
+  --on-seaglass: #0E2A33;
+  --foam: #EEF6F2;
+  --muted: #C7DED8;
+  --buoy: #F2B33D;
+  --on-buoy: #0E2A33;
+  --danger-fill: #B42840;
+  --on-danger: #FFFFFF;
+  --danger-text: #FFC2CA;
+  --ring: #EEF6F2;
+  --pane-solid: #163A44;
+  --raised-solid: #1A434E;
+  --pebble-solid: #1E4B55;
+  --pane-fill: rgb(14 42 51 / 0.6);
+  --raised-fill: rgb(14 42 51 / 0.72);
+  --pebble-fill: linear-gradient(160deg, rgb(159 216 203 / 0.12), rgb(159 216 203 / 0.05));
+  --rim: rgb(238 246 242 / 0.14);
+  --hover-tint: rgb(159 216 203 / 0.13);
+  --highlight: rgb(255 255 255 / 0.22);
+  --sheen: rgb(255 255 255 / 0.1);
+  --pool-1: rgb(159 216 203 / 0.3);
+  --pool-2: rgb(31 92 99 / 0.55);
+  --pool-3: rgb(242 179 61 / 0.14);
+  --caustic-opacity: 0.06;
+  --grain-opacity: 0.04;
+  --elev-1: 0 1px 2px rgb(5 20 25 / 0.25), 0 8px 24px -12px rgb(5 20 25 / 0.45);
+  --elev-2: 0 2px 4px rgb(5 20 25 / 0.25), 0 16px 40px -16px rgb(5 20 25 / 0.55);
+  --elev-3: 0 4px 8px rgb(5 20 25 / 0.3), 0 28px 64px -24px rgb(5 20 25 / 0.65);
+  --dur-press: 100ms;
+  --dur-quick: 150ms;
+  --dur-base: 240ms;
+  --dur-reveal: 400ms;
+  /* Root size scales from 16px towards 20px on 4K (R38.2). */
+  font-size: clamp(1rem, 0.9rem + 0.12vw, 1.25rem);
+}
+
+/* ---------- Shallows (light) ----------
+   Declared twice: once for an explicit choice, once for "system" when the OS is light. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --abyss: #DCEFEA;
+  --abyss-deep: #C4E2DC;
+  --tide: #A9D6CF;
+  --seaglass: #236B63;
+  --on-seaglass: #FFFFFF;
+  --foam: #0E2A33;
+  --muted: #36565C;
+  --buoy: #9A6400;
+  --on-buoy: #FFFFFF;
+  --danger-fill: #B42840;
+  --on-danger: #FFFFFF;
+  --danger-text: #A3203A;
+  --ring: #0E2A33;
+  --pane-solid: #F2F8F6;
+  --raised-solid: #FFFFFF;
+  --pebble-solid: #FFFFFF;
+  --pane-fill: rgb(255 255 255 / 0.55);
+  --raised-fill: rgb(255 255 255 / 0.74);
+  --pebble-fill: linear-gradient(160deg, rgb(255 255 255 / 0.78), rgb(255 255 255 / 0.6));
+  --rim: rgb(14 42 51 / 0.12);
+  --hover-tint: rgb(35 107 99 / 0.1);
+  --highlight: rgb(255 255 255 / 0.6);
+  --sheen: rgb(255 255 255 / 0.35);
+  --pool-1: rgb(255 255 255 / 0.7);
+  --pool-2: rgb(169 214 207 / 0.6);
+  --pool-3: rgb(243 231 201 / 0.55);
+  --caustic-opacity: 0.12;
+  --grain-opacity: 0.035;
+  --elev-1: 0 1px 2px rgb(5 20 25 / 0.12), 0 8px 24px -12px rgb(5 20 25 / 0.22);
+  --elev-2: 0 2px 4px rgb(5 20 25 / 0.12), 0 16px 40px -16px rgb(5 20 25 / 0.28);
+  --elev-3: 0 4px 8px rgb(5 20 25 / 0.15), 0 28px 64px -24px rgb(5 20 25 / 0.32);
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    color-scheme: light;
+    --abyss: #DCEFEA;
+    --abyss-deep: #C4E2DC;
+    --tide: #A9D6CF;
+    --seaglass: #236B63;
+    --on-seaglass: #FFFFFF;
+    --foam: #0E2A33;
+    --muted: #36565C;
+    --buoy: #9A6400;
+    --on-buoy: #FFFFFF;
+    --danger-fill: #B42840;
+    --on-danger: #FFFFFF;
+    --danger-text: #A3203A;
+    --ring: #0E2A33;
+    --pane-solid: #F2F8F6;
+    --raised-solid: #FFFFFF;
+    --pebble-solid: #FFFFFF;
+    --pane-fill: rgb(255 255 255 / 0.55);
+    --raised-fill: rgb(255 255 255 / 0.74);
+    --pebble-fill: linear-gradient(160deg, rgb(255 255 255 / 0.78), rgb(255 255 255 / 0.6));
+    --rim: rgb(14 42 51 / 0.12);
+  --hover-tint: rgb(35 107 99 / 0.1);
+    --highlight: rgb(255 255 255 / 0.6);
+    --sheen: rgb(255 255 255 / 0.35);
+    --pool-1: rgb(255 255 255 / 0.7);
+    --pool-2: rgb(169 214 207 / 0.6);
+    --pool-3: rgb(243 231 201 / 0.55);
+    --caustic-opacity: 0.12;
+    --grain-opacity: 0.035;
+    --elev-1: 0 1px 2px rgb(5 20 25 / 0.12), 0 8px 24px -12px rgb(5 20 25 / 0.22);
+    --elev-2: 0 2px 4px rgb(5 20 25 / 0.12), 0 16px 40px -16px rgb(5 20 25 / 0.28);
+    --elev-3: 0 4px 8px rgb(5 20 25 / 0.15), 0 28px 64px -24px rgb(5 20 25 / 0.32);
+  }
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  html {
+    background: var(--abyss);
+    color: var(--foam);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    min-block-size: 100dvh;
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-variation-settings: "SOFT" 100;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  p { text-wrap: pretty; }
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+  ::selection { background: var(--seaglass); color: var(--on-seaglass); }
+  @media (pointer: coarse) {
+    :where(button, a, select, input:not([type="checkbox"], [type="radio"]), [role="menuitem"]) {
+      min-block-size: 44px;
+    }
+  }
+}
+
+/* ==========================================================================
+   App_Background (R34.4): gradients + light pools + caustics + grain, no image requests
+   ========================================================================== */
+.app-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  contain: strict;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--abyss) 0%, var(--abyss-deep) 100%);
+}
+.app-background::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(60vmax 45vmax at 12% 8%, var(--pool-1), transparent 60%),
+    radial-gradient(55vmax 40vmax at 55% 55%, var(--pool-2), transparent 65%),
+    radial-gradient(50vmax 35vmax at 92% 96%, var(--pool-3), transparent 60%);
+}
+.app-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='420' viewBox='0 0 640 420'%3E%3Cg fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M0 70 C120 30 230 120 350 66 S540 30 640 84'/%3E%3Cpath d='M0 200 C140 158 250 250 372 188 S530 168 640 206'/%3E%3Cpath d='M0 330 C110 292 268 362 392 300 S548 288 640 328'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 160px 160px, 640px 420px;
+  mix-blend-mode: soft-light;
+  opacity: calc(var(--grain-opacity) + var(--caustic-opacity));
+}
+/* Opt-in drift; the "Animate background" preference is its pause control (R37.11). */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-bg-motion="on"] .app-background::before {
+    animation: pool-drift 60s ease-in-out infinite alternate;
+  }
+}
+@keyframes pool-drift {
+  from { translate: 0 0; }
+  50% { translate: 4% -3%; }
+  to { translate: -3% 4%; }
+}
+
+/* ==========================================================================
+   Glass levels (R34.2, R34.3, R34.5): opaque by default, translucent + blur when supported
+   ========================================================================== */
+@layer components {
+  .glass-pane, .glass-raised, .glass-pebble {
+    position: relative;
+    border: 1px solid var(--rim);
+  }
+  .glass-pane {
+    background: var(--pane-solid);
+    box-shadow: inset 0 1px 0 var(--highlight), var(--elev-1);
+  }
+  .glass-raised {
+    background: var(--raised-solid);
+    box-shadow: inset 0 1px 0 var(--highlight), var(--elev-3);
+  }
+  .glass-pebble {
+    background: var(--pebble-fill);
+    box-shadow: inset 0 1px 0 var(--highlight), var(--elev-1);
+  }
+  /* Sheen: light bending through curved glass, from the top-start corner. */
+  .glass-pane::before, .glass-raised::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(120% 60% at 0% 0%, var(--sheen), transparent 60%);
+    pointer-events: none;
+  }
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  :root:not([data-glass="reduced"]) .glass-pane {
+    background: var(--pane-fill);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
+  }
+  :root:not([data-glass="reduced"]) .glass-raised {
+    background: var(--raised-fill);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    backdrop-filter: blur(28px) saturate(160%);
+  }
+}
+
+/* Mobile Kanban columns skip the blur to keep scrolling smooth (R38.8). */
+@media (width < 48rem) {
+  :root .column-pane.glass-pane {
+    background: var(--pane-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Reduce transparency: the user preference and the OS setting (R39.1). */
+:root[data-glass="reduced"] .glass-pebble { background: var(--pebble-solid); }
+@media (prefers-reduced-transparency: reduce) {
+  :root .glass-pane, :root .glass-raised {
+    background: var(--pane-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root .glass-raised { background: var(--raised-solid); }
+  :root .glass-pebble { background: var(--pebble-solid); }
+}
+/* More contrast: opaque surfaces with solid rims (R39.2). */
+@media (prefers-contrast: more) {
+  :root .glass-pane, :root .glass-raised, :root .glass-pebble {
+    background: var(--pane-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: var(--foam);
+  }
+  :root .glass-pane::before, :root .glass-raised::before { display: none; }
+}
+/* Forced colors: system colors, no glass (R39.3). */
+@media (forced-colors: active) {
+  .glass-pane, .glass-raised, .glass-pebble {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .glass-pane::before, .glass-raised::before, .specular::before, .lift::after { display: none; }
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible { outline-color: Highlight; }
+}
+
+/* ==========================================================================
+   Interaction (R37.5, R37.6): compositor-only, shadow via ::after opacity
+   ========================================================================== */
+@layer components {
+  .lift {
+    transition: translate var(--dur-quick) var(--ease-out), scale var(--dur-press) var(--ease-out);
+  }
+  .lift::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: var(--elev-3);
+    opacity: 0;
+    transition: opacity var(--dur-quick) var(--ease-out);
+    pointer-events: none;
+  }
+  .specular::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / 0.18), transparent 40%);
+    opacity: 0;
+    transition: opacity var(--dur-quick) var(--ease-out);
+    pointer-events: none;
+  }
+}
+@media (hover: hover) {
+  .lift:hover::after { opacity: 1; }
+  .specular:hover::before { opacity: 1; }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .lift:hover { translate: 0 -2px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lift:active { scale: 0.98; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lift:active { filter: brightness(0.94); }
+}
+/* Controls revealed on hover also show on focus and on touch (R39.5). */
+.reveal-on-hover { opacity: 0; transition: opacity var(--dur-quick) var(--ease-out); }
+:where(.group\/reveal:hover, .group\/reveal:focus-within) .reveal-on-hover { opacity: 1; }
+@media (hover: none) { .reveal-on-hover { opacity: 1; } }
+
+/* ==========================================================================
+   Entrances (R37.2, R37.3): @starting-style, reduced motion = short fade
+   ========================================================================== */
+.enter {
+  transition: opacity var(--dur-base) var(--ease-out), translate var(--dur-base) var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 40ms);
+}
+@starting-style {
+  .enter { opacity: 0; translate: 0 0.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .enter { translate: none; transition-duration: 150ms; transition-delay: 0ms; }
+  @starting-style { .enter { translate: none; } }
+}
+
+/* ==========================================================================
+   BaseModal: native <dialog>, Glass_Raised, top-layer entry and exit (R37.4)
+   ========================================================================== */
+/* Top-layer elements keep fixed positioning even though .glass-* sets position: relative. */
+dialog.base-modal, dialog.nav-drawer, .menu-popover { position: fixed; }
+
+dialog.base-modal {
+  inset: 0;
+  margin: auto;
+  padding: 0;
+  inline-size: min(40rem, calc(100vw - 2rem));
+  max-block-size: calc(100dvh - 2rem);
+  color: var(--foam);
+  border-radius: var(--radius-pane);
+  overscroll-behavior: contain;
+  opacity: 0;
+  scale: 0.96;
+  transition: opacity 180ms var(--ease-out), scale 180ms var(--ease-out), display 180ms, overlay 180ms;
+  transition-behavior: allow-discrete;
+}
+dialog.base-modal[open] {
+  opacity: 1;
+  scale: 1;
+  transition-duration: 240ms;
+}
+@starting-style {
+  dialog.base-modal[open] { opacity: 0; scale: 0.96; }
+}
+dialog.base-modal::backdrop {
+  background: rgb(5 20 25 / 0.55);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-out), display 180ms, overlay 180ms;
+  transition-behavior: allow-discrete;
+}
+dialog.base-modal[open]::backdrop { opacity: 1; }
+@starting-style {
+  dialog.base-modal[open]::backdrop { opacity: 0; }
+}
+@media (width < 48rem) {
+  /* Full-height sheet on phones, sliding up with a brief blur. */
+  dialog.base-modal.sheet {
+    margin: auto 0 0;
+    inline-size: 100vw;
+    max-inline-size: 100vw;
+    max-block-size: 92dvh;
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+    scale: 1;
+  }
+}
+@media (width < 48rem) and (prefers-reduced-motion: no-preference) {
+  dialog.base-modal.sheet[open] { animation: sheet-in 300ms var(--ease-out) both; }
+}
+@keyframes sheet-in {
+  from { translate: 0 100%; filter: blur(6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.base-modal, dialog.base-modal[open] { scale: none; transition-duration: 150ms; }
+}
+
+/* ==========================================================================
+   Popovers and menus (R37.4): open from the trigger side
+   ========================================================================== */
+.menu-popover {
+  margin: 0;
+  padding: 0.375rem;
+  min-inline-size: 13rem;
+  color: var(--foam);
+  border-radius: var(--radius-pebble);
+  inset: auto;
+  overflow: visible;
+}
+.menu-popover:not(:is(:popover-open, .\:popover-open)) { display: none; }
+@supports (position-area: block-end) {
+  .menu-popover.place-below { position-area: block-end span-inline-start; position-try-fallbacks: flip-block, flip-inline; margin-block-start: 0.5rem; }
+  .menu-popover.place-above { position-area: block-start span-inline-end; position-try-fallbacks: flip-block, flip-inline; margin-block-end: 0.5rem; }
+  .menu-popover.place-side { position-area: inline-end span-block-end; position-try-fallbacks: flip-inline, flip-block, --below; margin-inline-start: 0.5rem; }
+}
+@position-try --below {
+  position-area: block-end span-inline-end;
+  margin-inline-start: 1rem;
+  min-inline-size: 0;
+  max-inline-size: calc(100% - 1rem);
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Only real popovers animate; a list that becomes a popover after hydration must not flash. */
+  .menu-popover[popover] {
+    opacity: 0;
+    translate: 0 -0.25rem;
+    transition: opacity 150ms var(--ease-out), translate 150ms var(--ease-out), display 150ms, overlay 150ms;
+    transition-behavior: allow-discrete;
+  }
+  .menu-popover:is(:popover-open, .\:popover-open) {
+    opacity: 1;
+    translate: 0 0;
+    transition-duration: 100ms;
+  }
+  @starting-style {
+    .menu-popover:is(:popover-open, .\:popover-open) { opacity: 0; translate: 0 -0.25rem; }
+  }
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  inline-size: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.625rem;
+  text-align: start;
+  color: var(--foam);
+  font-size: 0.9375rem;
+  transition: background-color var(--dur-quick) var(--ease-out);
+}
+.menu-item::before { content: ""; flex: none; inline-size: 1.1rem; }
+.menu-item[aria-checked="true"]::before { content: "✓"; color: var(--seaglass); font-weight: 700; }
+.menu-item:hover, .menu-item:focus-visible { background: var(--hover-tint); }
+.menu-item .hint { margin-inline-start: auto; color: var(--muted); }
+.menu-popover hr { border: 0; border-block-start: 1px solid var(--rim); margin: 0.375rem 0.5rem; }
+
+/* ==========================================================================
+   Curved Sidebar (signature element, R35.1, R35.2)
+   ========================================================================== */
+.sidebar {
+  position: fixed;
+  inset-block: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 30;
+  display: none;
+  flex-direction: column;
+  gap: 1rem;
+  inline-size: 5.25rem;
+  padding: 1.25rem 0.75rem 1rem;
+  border-radius: 1.5rem;
+  /* One continuous outward arc along the inline-end edge, like the rim of a lens. */
+  border-start-end-radius: 3rem 50%;
+  border-end-end-radius: 3rem 50%;
+}
+@media (width >= 48rem) { .sidebar { display: flex; } }
+@media (width >= 80rem) { .sidebar { inline-size: 17rem; padding-inline: 1rem 2rem; } }
+.app-main {
+  min-block-size: 100dvh;
+  padding: 0.75rem;
+}
+@media (width >= 48rem) { .app-main { padding-inline-start: calc(5.25rem + 1.5rem); } }
+@media (width >= 80rem) { .app-main { padding-inline-start: calc(17rem + 1.5rem); } }
+
+/* Items follow the arc: middle items sit slightly further out. Static, no motion. */
+@supports (translate: calc(sin(1deg) * 1px)) {
+  @media (width >= 80rem) {
+    /* Each item is narrowed by the most it is shifted, so the arc never causes overflow. */
+    .nav-arc > li { inline-size: calc(100% - 0.75rem); translate: calc(sin(var(--t, 0) * 180deg) * 0.75rem) 0; }
+  }
+}
+.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.875rem;
+  color: var(--foam);
+  opacity: 0.85;
+  text-decoration: none;
+  transition: background-color var(--dur-quick) var(--ease-out), opacity var(--dur-quick) var(--ease-out);
+}
+.nav-link:hover { background: var(--hover-tint); opacity: 1; }
+.nav-link[aria-current="page"] { opacity: 1; font-weight: 600; }
+.nav-current-pill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pebble-fill);
+  border: 1px solid color-mix(in srgb, var(--seaglass) 55%, transparent);
+  box-shadow: inset 0 1px 0 var(--highlight);
+}
+.nav-current-pill::before {
+  content: "";
+  position: absolute;
+  inset-block: 0.6rem;
+  inset-inline-start: 0.3rem;
+  inline-size: 3px;
+  border-radius: 3px;
+  background: var(--seaglass);
+}
+.nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Rail: labels float beside the icon on hover and focus; they stay the accessible name. */
+@media (width >= 48rem) and (width < 80rem) {
+  .sidebar .nav-label-rail {
+    position: absolute;
+    inset-inline-start: calc(100% + 0.75rem);
+    padding: 0.25rem 0.625rem;
+    border-radius: var(--radius-pill);
+    background: var(--raised-solid);
+    color: var(--foam);
+    font-size: 0.875rem;
+    box-shadow: var(--elev-2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-quick) var(--ease-out);
+  }
+  .sidebar .nav-link:is(:hover, :focus-visible) .nav-label-rail { opacity: 1; }
+  .sidebar .rail-hide { display: none; }
+  /* CSS decides from the first paint, so the Boards list never flashes inline before hydration
+     turns it into the rail flyout. */
+  .sidebar .nav-arc > li > ul:not(:popover-open) { display: none; }
+}
+.nav-sub { padding-inline-start: 1.75rem; display: grid; gap: 0.125rem; }
+.nav-sub .nav-link { min-block-size: 2.25rem; font-size: 0.9375rem; }
+.nav-sub[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .nav-sub { transition: opacity var(--dur-quick) var(--ease-out), translate var(--dur-quick) var(--ease-out); }
+  @starting-style { .nav-sub { opacity: 0; translate: 0 -0.25rem; } }
+}
+
+/* ==========================================================================
+   Nav_Drawer (R35.3, R35.4): modal dialog with a native swipe surface
+   ========================================================================== */
+dialog.nav-drawer {
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  inline-size: 100vw;
+  max-inline-size: 100vw;
+  block-size: 100svh;
+  max-block-size: 100svh;
+  background: transparent;
+  border: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+dialog.nav-drawer::backdrop { background: rgb(5 20 25 / 0.55); }
+.nav-drawer-scroller {
+  display: flex;
+  block-size: 100%;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.nav-drawer-scroller::-webkit-scrollbar { display: none; }
+.nav-drawer-sheet {
+  flex: 0 0 min(20rem, 85vw);
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0.5rem 0 0.5rem 0.5rem;
+  padding: 1rem;
+  border-radius: 1.5rem;
+  border-start-end-radius: 2.5rem 50%;
+  border-end-end-radius: 2.5rem 50%;
+  overflow-y: auto;
+}
+.nav-drawer-gap { flex: 0 0 100vw; scroll-snap-align: end; }
+
+/* ==========================================================================
+   Kanban (R38.4, R37.8)
+   ========================================================================== */
+.kanban-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  padding-block: 0.25rem 1rem;
+  padding-inline: 0.25rem;
+}
+.kanban-column {
+  flex: 0 0 85vw;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  max-block-size: calc(100dvh - 9rem);
+  border-radius: var(--radius-pane);
+}
+@media (width >= 48rem) {
+  .kanban-row { scroll-snap-type: x proximity; }
+  .kanban-column { flex-basis: clamp(17rem, 22vw, 24rem); }
+}
+.kanban-column[data-drop-target="true"] {
+  border-color: var(--seaglass);
+  box-shadow: inset 0 0 0 1px var(--seaglass), var(--elev-2);
+}
+.card-list { overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 0.625rem; padding: 0.25rem; }
+.card-item { container-type: inline-size; border-radius: var(--radius-pebble); }
+.card-item[data-dragging="true"] { opacity: 0.6; }
+@media (prefers-reduced-motion: no-preference) {
+  .card-item[data-dragging="true"] { scale: 1.03; rotate: 1.5deg; }
+}
+.card-meta { display: none; }
+@container (inline-size >= 14rem) {
+  .card-meta { display: flex; }
+}
+.drop-placeholder {
+  block-size: 4rem;
+  border-radius: var(--radius-pebble);
+  border: 1.5px dashed var(--seaglass);
+  background: rgb(159 216 203 / 0.08);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .drop-placeholder { transition: opacity var(--dur-quick) var(--ease-out), scale var(--dur-quick) var(--ease-out); }
+  @starting-style { .drop-placeholder { opacity: 0; scale: 0.96; } }
+}
+
+/* ==========================================================================
+   Fields: floating labels (R37.2)
+   ========================================================================== */
+.field { position: relative; display: block; }
+.field-input {
+  inline-size: 100%;
+  min-block-size: 3.25rem;
+  padding: 1.375rem 0.875rem 0.5rem;
+  border-radius: var(--radius-pebble);
+  background: var(--pebble-fill);
+  border: 1px solid var(--rim);
+  color: var(--foam);
+  font-size: 1rem;
+  transition: border-color var(--dur-quick) var(--ease-out);
+}
+:root[data-glass="reduced"] .field-input { background: var(--pebble-solid); }
+.field-input:hover { border-color: color-mix(in srgb, var(--seaglass) 45%, var(--rim)); }
+.field-input:focus-visible { border-color: var(--seaglass); }
+.field-input[aria-invalid="true"] { border-color: var(--danger-text); }
+.field-label {
+  position: absolute;
+  inset-inline-start: 0.9rem;
+  inset-block-start: 0.95rem;
+  color: var(--muted);
+  font-size: 1rem;
+  pointer-events: none;
+  transform-origin: left top;
+  transition: translate var(--dur-quick) var(--ease-out), scale var(--dur-quick) var(--ease-out), color var(--dur-quick);
+}
+.field-input:focus + .field-label,
+.field-input:not(:placeholder-shown) + .field-label,
+textarea.field-input + .field-label {
+  translate: 0 -0.6rem;
+  scale: 0.78;
+  color: var(--seaglass);
+}
+.field-error { color: var(--danger-text); font-size: 0.875rem; margin-block-start: 0.375rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .field-error { transition: opacity var(--dur-base) var(--ease-out), translate var(--dur-base) var(--ease-out); }
+  @starting-style { .field-error { opacity: 0; translate: 0 -0.25rem; } }
+}
+select.field-input { padding-block: 1.25rem 0.375rem; appearance: auto; }
+
+/* Brand mark: a tumbled sea-glass pebble. */
+.brand-mark { border-radius: 0.7rem 1.1rem 0.9rem 1.2rem; }
+
+/* ==========================================================================
+   Misc
+   ========================================================================== */
+.badge-bump { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .badge-bump { animation: badge-bump 300ms var(--ease-out); }
+}
+@keyframes badge-bump { 50% { scale: 1.15; } }
+
+.skeleton { background: color-mix(in srgb, var(--foam) 8%, transparent); border-radius: var(--radius-pebble); }
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton { animation: skeleton-pulse 1.4s ease-in-out 3; }
+}
+@keyframes skeleton-pulse { 50% { opacity: 0.55; } }
+
+.visually-hidden {
+  position: absolute !important;
+  inline-size: 1px; block-size: 1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* The auth page pebble glides once from To do to Done: the one unprompted motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .pebble-glide { animation: pebble-glide 1.6s 0.4s var(--ease-out) both; }
+}
+@keyframes pebble-glide {
+  from { translate: calc(-200% - 1.5rem) 0; }
+  to { translate: 0 0; }
+}
+
+/* View Transitions (React <ViewTransition>): morphs for moved cards and the nav pill (R37.7, R37.9). */
+::view-transition-group(.morph) { animation-duration: 400ms; }
+::view-transition-group(.glide) { animation-duration: 300ms; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+
+/* Toasts are glass too. */
+.toast-glass {
+  color: var(--foam) !important;
+  background: var(--raised-solid) !important;
+  border: 1px solid var(--rim);
+  border-radius: var(--radius-pebble) !important;
+  box-shadow: var(--elev-2) !important;
+}

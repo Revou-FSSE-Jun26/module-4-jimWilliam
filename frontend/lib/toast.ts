@@ -1,0 +1,9 @@
+import toast from "react-hot-toast";
+
+/** The only way components show toasts (FE-03). */
+export const notify = {
+  success: (message: string) => toast.success(message),
+  error: (message: string) => toast.error(message),
+  loading: (message: string) => toast.loading(message),
+  dismiss: (id?: string) => toast.dismiss(id),
+};
