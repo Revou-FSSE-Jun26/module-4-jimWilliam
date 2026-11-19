@@ -1,0 +1,33 @@
+# Secrets: every real env file stays out of git; only the examples are committed
+.env*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.hypothesis/
+*.sqlite3
+*.db
+instance/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+
+# Playwright (the HTML report in frontend/playwright-report is committed on purpose)
+test-results/
+blob-report/
+playwright/.cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
