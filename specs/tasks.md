@@ -6,7 +6,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
 
 ## Tasks
 
-- [ ] 1. Specs deliverables
+- [x] 1. Specs deliverables
   - [x] 1.1 Create the `/specs` directory with the Spec_Set
     - Copy `brief.md`, `requirements.md`, `design.md`, `tasks.md` and `CHANGELOG.md` from `.kiro/specs/revotask/` into `/specs`
     - Check that `brief.md` has overview, user roles, core features, tech stack and at least 2 non-functional requirements
@@ -19,7 +19,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Keep `!.env.example` un-ignored so the examples can be committed
     - _Requirements: 28.1_
 
-- [ ] 2. Guidelines deliverables (must precede all backend and frontend code)
+- [x] 2. Guidelines deliverables (must precede all backend and frontend code)
   - [x] 2.1 Write `/guidelines/backend.md`
     - Cover Blueprint layout, Envelope, Marshmallow validation, error handling, JWT, ownership checks, CORS, secrets, tests
     - Write every rule as Rule, Rationale and Example
@@ -45,7 +45,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Confirm every rule still has Rule, Rationale and Example
     - _Requirements: 23.2, 23.3_
 
-- [ ] 3. Commit gate: specs and guidelines first
+- [x] 3. Commit gate: specs and guidelines first
   - [x] 3.1 Add `scripts/check-guidelines-first.ps1`
     - Compare the first commit that adds files under `backend/` or `frontend/` with the guidelines commit using `git log --diff-filter=A`
     - Exit non-zero if a code commit precedes the guidelines commit
@@ -57,7 +57,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Do not add any file under `backend/` or `frontend/` in these commits
     - _Requirements: 23.6, 28.3_
 
-- [ ] 4. Backend foundation
+- [x] 4. Backend foundation
   - [x] 4.1 Scaffold the Flask project
     - Create `backend/app/__init__.py` (`create_app`), `extensions.py`, config from environment variables, `wsgi.py`, `requirements.txt`
     - Create the eight Blueprint packages under `backend/app/blueprints/` (auth, boards, columns, cards, comments, notifications, analytics, users), each with `__init__.py`, `routes.py`, `service.py` and `schema.py`, and register them
@@ -91,7 +91,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Test B26, the eight Blueprint packages and the three files in each
     - _Requirements: 10.1, 11.1, 11.2_
 
-- [ ] 5. Backend: auth Blueprint
+- [x] 5. Backend: auth Blueprint
   - [x] 5.1 Implement B1: POST /api/auth/register
     - Add the schema, service (salted hash with `generate_password_hash`) and route
     - Return 201, 400 or 409
@@ -110,7 +110,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 5: Passwords are salted hashes**
     - **Validates: Requirements 1.6**
 
-- [ ] 6. Backend: boards Blueprint
+- [x] 6. Backend: boards Blueprint
   - [x] 6.1 Implement B3: POST /api/boards
     - Create the Board and an `admin` BoardMember for the creator in one transaction
     - _Requirements: 2.1_
@@ -156,7 +156,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 9: Board create and fetch round trip**
     - **Validates: Requirements 2.1, 2.2, 2.3, 4.2**
 
-- [ ] 7. Backend: columns Blueprint
+- [x] 7. Backend: columns Blueprint
   - [x] 7.1 Implement B8: POST /api/boards/<id>/columns
     - Assign a Float order after the last Column
     - Every column route calls `require_member` on the Column's Board (403 for non-members)
@@ -177,7 +177,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 11: Column reorder round trip**
     - **Validates: Requirements 3.1, 3.4**
 
-- [ ] 8. Backend: cards Blueprint
+- [x] 8. Backend: cards Blueprint
   - [x] 8.1 Implement B12: POST /api/columns/<id>/cards
     - Create the Card with a Float order and return 201
     - Every card route calls `require_member` on the Card's Board (403 for non-members)
@@ -228,7 +228,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 17: Search is case-insensitive and complete**
     - **Validates: Requirements 5.2, 30.4**
 
-- [ ] 9. Backend: comments Blueprint
+- [x] 9. Backend: comments Blueprint
   - [x] 9.1 Implement B17: POST /api/cards/<id>/comments
     - _Requirements: 6.1, 6.5, 6.6_
 
@@ -255,7 +255,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Create `backend/tests/test_comments.py` asserting 201, 400, 401 and 403
     - _Requirements: 24.2_
 
-- [ ] 10. Backend: notifications Blueprint
+- [x] 10. Backend: notifications Blueprint
   - [x] 10.1 Implement B21: GET /api/notifications?page&per_page
     - Return `{items, page, per_page, total, unread_count}`
     - Return 400 when `page` or `per_page` is not a positive integer
@@ -281,7 +281,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Test assignment and comment notifications
     - _Requirements: 7.1_
 
-- [ ] 11. Backend: analytics Blueprint
+- [x] 11. Backend: analytics Blueprint
   - [x] 11.1 Implement B23: GET /api/boards/<id>/analytics
     - Admin only
     - Compute cards per Column, cards completed this week and activity per member with SQLAlchemy joins in `analytics/service.py`
@@ -291,7 +291,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 23: Analytics matches a reference model**
     - **Validates: Requirements 8.1**
 
-- [ ] 12. Backend: users Blueprint
+- [x] 12. Backend: users Blueprint
   - [x] 12.1 Implement B24: GET /api/users/me
     - Return the profile without the password field
     - _Requirements: 9.1_
@@ -312,7 +312,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 24: Profile update changes only name and email**
     - **Validates: Requirements 9.2, 9.3**
 
-- [ ] 13. Backend cross-route tests and commit
+- [x] 13. Backend cross-route tests and commit
   - [ ]* 13.1 Write property test for invalid payloads
     - **Property 3: Invalid payloads are rejected with 400**
     - **Validates: Requirements 1.3, 3.5, 5.4, 6.5, 7.4, 11.4**
@@ -336,7 +336,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
 - [x] 14. Checkpoint - Backend
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 15. Frontend foundation
+- [x] 15. Frontend foundation
   - [x] 15.1 Scaffold the Next.js project
     - Create `frontend/` with App Router (no `src/` folder), TypeScript, Tailwind CSS, react-hot-toast, Jest and React Testing Library
     - Create the folders `components/shared/`, `hooks/`, `lib/` and `context/` at the project root
@@ -433,7 +433,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 26: Unauthenticated users are redirected**
     - **Validates: Requirements 12.6, 32.6**
 
-- [ ] 16. Frontend pages and features
+- [x] 16. Frontend pages and features
   - [x] 16.1 Implement P1: /register
     - Controlled form with name, email and password, client-side validation, call B1, redirect to /login, error toast
     - _Requirements: 12.1, 12.3, 12.5, 12.7_
@@ -548,7 +548,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
 - [x] 17. Checkpoint - Frontend
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 18. Frontend tests and commit
+- [x] 18. Frontend tests and commit
   - [x] 18.1 Write component tests for BaseButton and BaseModal
     - Test variants, the disabled state, the close control and Escape
     - _Requirements: 20.1, 20.3, 20.4, 16.6, 25.2_
@@ -620,7 +620,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Create a separate commit for the tests and the report
     - _Requirements: 26.1, 26.5, 28.3_
 
-- [ ] 21. README
+- [x] 21. README
   - [x] 21.1 Write `README.md`
     - Include overview, AI workflow summary, feature list, technology list, local run steps, test steps and screenshots
     - _Requirements: 29.1_
