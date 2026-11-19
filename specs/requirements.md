@@ -102,7 +102,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 
 1. WHEN a Board_Member sends POST /api/boards/<id>/columns with a valid `name`, THE Backend SHALL create the Column with a FLOAT order value after the last Column and return status 201.
 2. WHEN a Board_Member sends PATCH /api/columns/<id> with a valid `name`, THE Backend SHALL update the Column name and return the updated Column in the Envelope.
-3. WHEN a Board_Member sends DELETE /api/columns/<id>, THE Backend SHALL delete the Column, soft-delete its Cards and return status 200.
+3. WHEN a Board_Member sends DELETE /api/columns/<id>, THE Backend SHALL delete the Column together with its Cards and their Comments and return status 200.
 4. WHEN an authenticated User sends PATCH /api/boards/<id>/columns/reorder with a valid list of Column identifiers and FLOAT order values, THE Backend SHALL persist the new order of the Columns.
 5. IF a Column request payload fails schema validation, THEN THE Backend SHALL return status 400 with an error Envelope.
 6. IF a Column identified in the URL does not exist, THEN THE Backend SHALL return status 404 with an error Envelope.

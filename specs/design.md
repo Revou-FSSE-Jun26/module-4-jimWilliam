@@ -208,7 +208,7 @@ def move_card(card_id, payload, user_id) -> Card:
 
 Search and My Tasks (`cards/service.py`) join `Card → Column → Board → BoardMember` and filter `BoardMember.user_id == current_user`, so a User can never find Cards on Boards they cannot open (R5.2). The search term uses `Card.title.ilike(f"%{escaped}%", escape="\\")` or the same on `description` with bound parameters; `%`, `_` and `\` in the term are escaped. Empty or whitespace-only terms raise `AppError(..., 400)`. Every query adds `Card.deleted_at.is_(None)` and selects `Board.id` and `Board.name` so the Frontend can group by Board (R5.1, R17.5).
 
-Analytics (`analytics/service.py`) joins `Column`, `Card`, and `User` (assignee or comment author) to return `cards_per_column`, `completed_this_week` and `activity_per_member`. A card counts as completed this week when it sits in the board's last Column by order and `updated_at` is within the current ISO week. This definition is an assumption because the requirements do not define "completed".
+Analytics (`analytics/service.py`) joins `Column`, `Card`, `Comment`, `BoardMember` and `User` to return `cards_per_column`, `completed_this_week` and `activity_per_member` (comments written and live Cards assigned, per Board_Member). A card counts as completed this week when it sits in the board's last Column by order and `updated_at` is within the current ISO week. This definition is an assumption because the requirements do not define "completed".
 
 Notifications are created by services in the same transaction as the triggering change (R31.11): `boards/service.add_member` ("You were added to <board>"), `cards/service.update_card` when `assignee_id` changes to another User ("You were assigned <card>"), and `comments/service.create_comment` when the Card's assignee is not the commenter ("New comment on <card>"). No Notification is created for a User's own actions.
 
@@ -638,7 +638,8 @@ Notable response shapes:
 {"data": {"id": "uuid", "column_id": "uuid", "board_id": "uuid", "board_name": "…", "title": "…", "order": 1536.0, "updated_at": "…"}}
 {"data": {"cards_per_column": [{"column_id": "uuid", "count": 3}],
           "completed_this_week": 2,
-          "activity_per_member": [{"user_id": "uuid", "name": "…", "comments": 4, "cards_updated": 7}]}}
+          "activity_per_member": [{"user_id": "uuid", "name": "…", "comments": 4, "cards_assigned": 7}],
+          "week_start": "…"}}
 {"error": "Forbidden"}
 ```
 

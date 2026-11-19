@@ -51,35 +51,35 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Exit non-zero if a code commit precedes the guidelines commit
     - _Requirements: 23.6_
 
-  - [ ] 3.2 Commit specs and guidelines
+  - [x] 3.2 Commit specs and guidelines
     - Create a commit for `/specs`, `.gitignore` and the scripts
     - Create a separate later commit for `/guidelines`
     - Do not add any file under `backend/` or `frontend/` in these commits
     - _Requirements: 23.6, 28.3_
 
 - [ ] 4. Backend foundation
-  - [ ] 4.1 Scaffold the Flask project
+  - [x] 4.1 Scaffold the Flask project
     - Create `backend/app/__init__.py` (`create_app`), `extensions.py`, config from environment variables, `wsgi.py`, `requirements.txt`
     - Create the eight Blueprint packages under `backend/app/blueprints/` (auth, boards, columns, cards, comments, notifications, analytics, users), each with `__init__.py`, `routes.py`, `service.py` and `schema.py`, and register them
     - Create `backend/.env.example` with `JWT_SECRET_KEY`, `DATABASE_URL`, `FRONTEND_ORIGIN` and `JWT_ACCESS_TOKEN_EXPIRES_HOURS` placeholders
     - Configure CORS for `FRONTEND_ORIGIN` only; rewrite a `postgres://` URL to `postgresql://`
     - _Requirements: 1.8, 11.1, 11.2, 28.2, 30.2, 30.3_
 
-  - [ ] 4.2 Implement the Envelope, error handlers and access helpers
+  - [x] 4.2 Implement the Envelope, error handlers and access helpers
     - Create `common/envelope.py` (`ok`, `fail`), `common/errors.py` (`AppError` and handlers for validation, JWT and 500 without stack trace) and `common/access.py`
     - Implement `require_member(board_id, user_id, admin=False)`, checking 404 before 403
     - _Requirements: 1.7, 11.3, 11.4, 11.6, 31.4, 31.8_
 
-  - [ ] 4.3 Implement the data models and the first migration
+  - [x] 4.3 Implement the data models and the first migration
     - Create User, Board (`name`), BoardMember (`role`), Column (`name`), Card, Comment and Notification models with UUID keys, timestamps, Float `order` and Card `deleted_at`
     - Add the indexes and the unique (board_id, user_id) constraint from the design and generate the Flask-Migrate migration
     - _Requirements: 4.1, 11.5, 30.4_
 
-  - [ ] 4.4 Implement B26: GET /api/health
+  - [x] 4.4 Implement B26: GET /api/health
     - Register the route in `create_app` returning `{"data": {"status": "ok"}}` without JWT
     - _Requirements: 10.1_
 
-  - [ ] 4.5 Create pytest fixtures
+  - [x] 4.5 Create pytest fixtures
     - Create `backend/tests/conftest.py` with the app, test database, client, user factory and JWT helper
     - _Requirements: 24.1_
 
@@ -92,12 +92,12 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - _Requirements: 10.1, 11.1, 11.2_
 
 - [ ] 5. Backend: auth Blueprint
-  - [ ] 5.1 Implement B1: POST /api/auth/register
+  - [x] 5.1 Implement B1: POST /api/auth/register
     - Add the schema, service (salted hash with `generate_password_hash`) and route
     - Return 201, 400 or 409
     - _Requirements: 1.1, 1.2, 1.3, 1.6_
 
-  - [ ] 5.2 Implement B2: POST /api/auth/login
+  - [x] 5.2 Implement B2: POST /api/auth/login
     - Verify the hash and return `{token, expires_at, user}`, or 401 with the same message for unknown email and wrong password
     - Read the token expiry from `JWT_ACCESS_TOKEN_EXPIRES_HOURS` (default 24)
     - _Requirements: 1.4, 1.5, 1.6, 1.8_
@@ -111,36 +111,36 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Validates: Requirements 1.6**
 
 - [ ] 6. Backend: boards Blueprint
-  - [ ] 6.1 Implement B3: POST /api/boards
+  - [x] 6.1 Implement B3: POST /api/boards
     - Create the Board and an `admin` BoardMember for the creator in one transaction
     - _Requirements: 2.1_
 
-  - [ ] 6.2 Implement B4: GET /api/boards
+  - [x] 6.2 Implement B4: GET /api/boards
     - Return only the Boards where the requesting User is a Board_Member, with the User's `role`
     - _Requirements: 2.2_
 
-  - [ ] 6.3 Implement B5: GET /api/boards/<id>
+  - [x] 6.3 Implement B5: GET /api/boards/<id>
     - Return the Board with nested Columns and live Cards, ordered by `order`
     - Return 404 and 403 through `require_member`
     - _Requirements: 2.3, 2.6, 2.7_
 
-  - [ ] 6.4 Implement B6: PATCH /api/boards/<id>
+  - [x] 6.4 Implement B6: PATCH /api/boards/<id>
     - Admin only; update `name`
     - _Requirements: 2.4, 2.6, 2.7, 2.8_
 
-  - [ ] 6.5 Implement B7: DELETE /api/boards/<id>
+  - [x] 6.5 Implement B7: DELETE /api/boards/<id>
     - Admin only
     - _Requirements: 2.5, 2.6, 2.7, 2.8_
 
-  - [ ] 6.8 Implement B27: GET /api/boards/<id>/members
+  - [x] 6.8 Implement B27: GET /api/boards/<id>/members
     - Return members with name, email and role
     - _Requirements: 31.1_
 
-  - [ ] 6.9 Implement B28: POST /api/boards/<id>/members
+  - [x] 6.9 Implement B28: POST /api/boards/<id>/members
     - Admin only; look up the User by email (404), reject an existing member (409), create a Notification for the added User
     - _Requirements: 31.2, 31.4, 31.5, 31.6, 31.11_
 
-  - [ ] 6.10 Implement B29: DELETE /api/boards/<id>/members/<user_id>
+  - [x] 6.10 Implement B29: DELETE /api/boards/<id>/members/<user_id>
     - Admin only; return 409 if the removal would leave no admin
     - _Requirements: 31.3, 31.4, 31.7_
 
@@ -157,20 +157,20 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Validates: Requirements 2.1, 2.2, 2.3, 4.2**
 
 - [ ] 7. Backend: columns Blueprint
-  - [ ] 7.1 Implement B8: POST /api/boards/<id>/columns
+  - [x] 7.1 Implement B8: POST /api/boards/<id>/columns
     - Assign a Float order after the last Column
     - Every column route calls `require_member` on the Column's Board (403 for non-members)
     - _Requirements: 3.1, 3.5, 3.6, 31.8_
 
-  - [ ] 7.2 Implement B9: PATCH /api/boards/<id>/columns/reorder
+  - [x] 7.2 Implement B9: PATCH /api/boards/<id>/columns/reorder
     - Validate the list of identifiers and Float orders and persist them
     - _Requirements: 3.4, 3.5, 3.6_
 
-  - [ ] 7.3 Implement B10: PATCH /api/columns/<id>
+  - [x] 7.3 Implement B10: PATCH /api/columns/<id>
     - _Requirements: 3.2, 3.5, 3.6_
 
-  - [ ] 7.4 Implement B11: DELETE /api/columns/<id>
-    - Soft-delete the Column's Cards in the same transaction
+  - [x] 7.4 Implement B11: DELETE /api/columns/<id>
+    - Delete the Column; its Cards and Comments go with it through `ondelete="CASCADE"` (v3 entry 14)
     - _Requirements: 3.3, 3.6_
 
   - [ ]* 7.5 Write property test for column reorder
@@ -178,28 +178,28 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Validates: Requirements 3.1, 3.4**
 
 - [ ] 8. Backend: cards Blueprint
-  - [ ] 8.1 Implement B12: POST /api/columns/<id>/cards
+  - [x] 8.1 Implement B12: POST /api/columns/<id>/cards
     - Create the Card with a Float order and return 201
     - Every card route calls `require_member` on the Card's Board (403 for non-members)
     - _Requirements: 4.1, 4.2, 4.7, 31.8_
 
-  - [ ] 8.2 Implement B13: GET /api/cards?assignee=me and ?search=<term>
+  - [x] 8.2 Implement B13: GET /api/cards?assignee=me and ?search=<term>
     - Join Card → Column → Board → BoardMember and keep only the requesting User's Boards
     - Use bound parameters, escape `%` and `_`, match case-insensitively on title and description, exclude soft-deleted Cards
     - Return `board_id` and `board_name` on every Card
     - Return 400 for an empty or whitespace term
     - _Requirements: 5.1, 5.2, 5.4, 30.4_
 
-  - [ ] 8.3 Implement B14: PATCH /api/cards/<id>
+  - [x] 8.3 Implement B14: PATCH /api/cards/<id>
     - Update fields and `updated_at`, return 404 for unknown or deleted Cards
     - Reject an `assignee_id` that is not a Board_Member (400); notify a newly assigned User
     - _Requirements: 4.3, 4.7, 31.9, 31.11_
 
-  - [ ] 8.4 Implement B15: DELETE /api/cards/<id>
+  - [x] 8.4 Implement B15: DELETE /api/cards/<id>
     - Set `deleted_at` and exclude the Card from later responses
     - _Requirements: 4.4, 4.7_
 
-  - [ ] 8.5 Implement B16: PATCH /api/cards/<id>/position
+  - [x] 8.5 Implement B16: PATCH /api/cards/<id>/position
     - Add `CardPositionSchema` (UUID `column_id`, positive float `order`)
     - Update only the moved Card row; return 400 if the target Column is on another Board
     - _Requirements: 4.5, 4.6, 4.7, 30.5, 31.10_
@@ -229,17 +229,17 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Validates: Requirements 5.2, 30.4**
 
 - [ ] 9. Backend: comments Blueprint
-  - [ ] 9.1 Implement B17: POST /api/cards/<id>/comments
+  - [x] 9.1 Implement B17: POST /api/cards/<id>/comments
     - _Requirements: 6.1, 6.5, 6.6_
 
-  - [ ] 9.2 Implement B18: GET /api/cards/<id>/comments
+  - [x] 9.2 Implement B18: GET /api/cards/<id>/comments
     - _Requirements: 6.2, 6.6_
 
-  - [ ] 9.3 Implement B19: PATCH /api/comments/<id>
+  - [x] 9.3 Implement B19: PATCH /api/comments/<id>
     - Allow the owner only and return 403 otherwise
     - _Requirements: 6.3, 6.5, 6.7_
 
-  - [ ] 9.4 Implement B20: DELETE /api/comments/<id>
+  - [x] 9.4 Implement B20: DELETE /api/comments/<id>
     - Allow the owner only and return 403 otherwise
     - _Requirements: 6.4, 6.7_
 
@@ -251,21 +251,21 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 20: Comment owner can edit and delete**
     - **Validates: Requirements 6.3, 6.4**
 
-  - [ ] 9.7 Write the comments status-code tests
+  - [x] 9.7 Write the comments status-code tests
     - Create `backend/tests/test_comments.py` asserting 201, 400, 401 and 403
     - _Requirements: 24.2_
 
 - [ ] 10. Backend: notifications Blueprint
-  - [ ] 10.1 Implement B21: GET /api/notifications?page&per_page
+  - [x] 10.1 Implement B21: GET /api/notifications?page&per_page
     - Return `{items, page, per_page, total, unread_count}`
     - Return 400 when `page` or `per_page` is not a positive integer
     - _Requirements: 7.1, 7.4_
 
-  - [ ] 10.2 Implement B22: PATCH /api/notifications/<id>/read
+  - [x] 10.2 Implement B22: PATCH /api/notifications/<id>/read
     - Return 403 for another User's Notification
     - _Requirements: 7.2, 7.3_
 
-  - [ ] 10.3 Create Notifications from membership, card assignment and comments
+  - [x] 10.3 Create Notifications from membership, card assignment and comments
     - Add service hooks in `boards/service.py`, `cards/service.py` and `comments/service.py`; never notify a User about their own action
     - _Requirements: 7.1, 31.11_
 
@@ -282,7 +282,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - _Requirements: 7.1_
 
 - [ ] 11. Backend: analytics Blueprint
-  - [ ] 11.1 Implement B23: GET /api/boards/<id>/analytics
+  - [x] 11.1 Implement B23: GET /api/boards/<id>/analytics
     - Admin only
     - Compute cards per Column, cards completed this week and activity per member with SQLAlchemy joins in `analytics/service.py`
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
@@ -292,11 +292,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Validates: Requirements 8.1**
 
 - [ ] 12. Backend: users Blueprint
-  - [ ] 12.1 Implement B24: GET /api/users/me
+  - [x] 12.1 Implement B24: GET /api/users/me
     - Return the profile without the password field
     - _Requirements: 9.1_
 
-  - [ ] 12.2 Implement B25: PATCH /api/users/me
+  - [x] 12.2 Implement B25: PATCH /api/users/me
     - Update only name and email, ignore `password`, return 409 for a duplicate email
     - _Requirements: 9.2, 9.3, 9.4_
 
@@ -329,11 +329,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - **Property 8: Unknown identifiers return 404**
     - **Validates: Requirements 2.6, 3.6, 4.7, 8.3**
 
-  - [ ] 13.5 Commit the Backend
+  - [x] 13.5 Commit the Backend
     - Run `pytest -v`, then commit `backend/` with its `.env.example`
     - _Requirements: 24.1, 28.2, 28.3_
 
-- [ ] 14. Checkpoint - Backend
+- [x] 14. Checkpoint - Backend
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 15. Frontend foundation
@@ -571,7 +571,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - _Requirements: 25.1, 28.2, 28.3_
 
 - [ ] 19. Deployment configuration
-  - [ ] 19.1 Add the Railway configuration for the Backend
+  - [x] 19.1 Add the Railway configuration for the Backend
     - Create `Procfile` or `railway.json` that runs `flask db upgrade` and then `gunicorn wsgi:app`
     - _Requirements: 27.1, 27.2_
 
