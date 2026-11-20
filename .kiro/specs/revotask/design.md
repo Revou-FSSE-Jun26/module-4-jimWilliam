@@ -934,7 +934,7 @@ For any board state and any drop, the displayed state shows the Card at its targ
 
 ### Property 29: Computed order lies between neighbours
 
-For any two neighbour order values `prev < next` (or an absent neighbour at either end), `computeOrder` returns a value strictly between them, and a positive value whenever `next` is positive.
+For any two neighbour order values `prev < next` between which a double-precision value exists (or an absent neighbour at either end), `computeOrder` returns a value strictly between them, and a positive value whenever `next` is positive. When no such value exists, precision is exhausted (see Data Models, Float precision).
 
 **Validates: Requirements 15.3, 4.6**
 

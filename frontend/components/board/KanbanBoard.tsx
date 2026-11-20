@@ -15,6 +15,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useDragAndDrop, type BoardColumn } from "@/hooks/useDragAndDrop";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { apiClient } from "@/lib/apiClient";
+import { sortBoard } from "@/lib/board";
 import { notify } from "@/lib/toast";
 import type { BoardDetail, Card, Column } from "@/lib/types";
 
@@ -24,7 +25,7 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
   const { token } = useAuth();
   const handleError = useErrorHandler();
   const [board, setBoard] = useState(initialBoard);
-  const [columns, setColumns] = useState<BoardColumn[]>(initialBoard.columns);
+  const [columns, setColumns] = useState<BoardColumn[]>(() => sortBoard(initialBoard.columns));
   const [firstLoad, setFirstLoad] = useState(true);
   const [openCard, setOpenCard] = useState<Card | null>(null);
   const [focusCardId, setFocusCardId] = useState<string | null>(null);

@@ -21,7 +21,9 @@ def register(payload) -> User:
     data = RegisterSchema().load(payload or {})
     if email_taken(data["email"]):
         raise AppError("An account with this email already exists", 409)
-    user = User(name=data["name"].strip(), email=data["email"], password_hash=generate_password_hash(data["password"]))
+    method = current_app.config.get("PASSWORD_HASH_METHOD")
+    password_hash = generate_password_hash(data["password"], method=method) if method else generate_password_hash(data["password"])
+    user = User(name=data["name"].strip(), email=data["email"], password_hash=password_hash)
     db.session.add(user)
     db.session.commit()
     return user

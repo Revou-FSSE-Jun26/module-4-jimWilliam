@@ -83,11 +83,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Create `backend/tests/conftest.py` with the app, test database, client, user factory and JWT helper
     - _Requirements: 24.1_
 
-  - [ ]* 4.6 Write property test for the Envelope
+  - [x]* 4.6 Write property test for the Envelope
     - **Property 25: Envelope on every response**
     - **Validates: Requirements 11.3, 11.6**
 
-  - [ ]* 4.7 Write example tests for health and structure
+  - [x]* 4.7 Write example tests for health and structure
     - Test B26, the eight Blueprint packages and the three files in each
     - _Requirements: 10.1, 11.1, 11.2_
 
@@ -102,11 +102,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Read the token expiry from `JWT_ACCESS_TOKEN_EXPIRES_HOURS` (default 24)
     - _Requirements: 1.4, 1.5, 1.6, 1.8_
 
-  - [ ]* 5.3 Write property test for wrong credentials
+  - [x]* 5.3 Write property test for wrong credentials
     - **Property 4: Wrong credentials are rejected**
     - **Validates: Requirements 1.5**
 
-  - [ ]* 5.4 Write property test for password hashing
+  - [x]* 5.4 Write property test for password hashing
     - **Property 5: Passwords are salted hashes**
     - **Validates: Requirements 1.6**
 
@@ -144,15 +144,15 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Admin only; return 409 if the removal would leave no admin
     - _Requirements: 31.3, 31.4, 31.7_
 
-  - [ ]* 6.11 Write property test for the admin invariant
+  - [x]* 6.11 Write property test for the admin invariant
     - **Property 35: A Board always keeps an admin**
     - **Validates: Requirements 2.1, 31.2, 31.3, 31.7**
 
-  - [ ]* 6.6 Write property test for board update
+  - [x]* 6.6 Write property test for board update
     - **Property 10: Board update applies the given fields**
     - **Validates: Requirements 2.4**
 
-  - [ ]* 6.7 Write property test for board create and fetch
+  - [x]* 6.7 Write property test for board create and fetch
     - **Property 9: Board create and fetch round trip**
     - **Validates: Requirements 2.1, 2.2, 2.3, 4.2**
 
@@ -173,7 +173,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Delete the Column; its Cards and Comments go with it through `ondelete="CASCADE"` (v3 entry 14)
     - _Requirements: 3.3, 3.6_
 
-  - [ ]* 7.5 Write property test for column reorder
+  - [x]* 7.5 Write property test for column reorder
     - **Property 11: Column reorder round trip**
     - **Validates: Requirements 3.1, 3.4**
 
@@ -204,27 +204,27 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Update only the moved Card row; return 400 if the target Column is on another Board
     - _Requirements: 4.5, 4.6, 4.7, 30.5, 31.10_
 
-  - [ ]* 8.6 Write property test for card position persistence
+  - [x]* 8.6 Write property test for card position persistence
     - **Property 12: Card position persists and touches one row**
     - **Validates: Requirements 4.5, 14.6, 30.5**
 
-  - [ ]* 8.7 Write property test for the position schema
+  - [x]* 8.7 Write property test for the position schema
     - **Property 13: Position schema accepts only valid payloads**
     - **Validates: Requirements 4.6**
 
-  - [ ]* 8.8 Write property test for card update
+  - [x]* 8.8 Write property test for card update
     - **Property 14: Card update refreshes `updated_at`**
     - **Validates: Requirements 4.3**
 
-  - [ ]* 8.9 Write property test for soft delete
+  - [x]* 8.9 Write property test for soft delete
     - **Property 15: Soft-deleted Cards never appear**
     - **Validates: Requirements 4.4**
 
-  - [ ]* 8.10 Write property test for the assignee filter
+  - [x]* 8.10 Write property test for the assignee filter
     - **Property 16: Assignee filter**
     - **Validates: Requirements 5.1**
 
-  - [ ]* 8.11 Write property test for search
+  - [x]* 8.11 Write property test for search
     - **Property 17: Search is case-insensitive and complete**
     - **Validates: Requirements 5.2, 30.4**
 
@@ -243,11 +243,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Allow the owner only and return 403 otherwise
     - _Requirements: 6.4, 6.7_
 
-  - [ ]* 9.5 Write property test for comment create and list
+  - [x]* 9.5 Write property test for comment create and list
     - **Property 19: Comment create and list round trip**
     - **Validates: Requirements 6.1, 6.2**
 
-  - [ ]* 9.6 Write property test for comment owner edit and delete
+  - [x]* 9.6 Write property test for comment owner edit and delete
     - **Property 20: Comment owner can edit and delete**
     - **Validates: Requirements 6.3, 6.4**
 
@@ -269,15 +269,15 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Add service hooks in `boards/service.py`, `cards/service.py` and `comments/service.py`; never notify a User about their own action
     - _Requirements: 7.1, 31.11_
 
-  - [ ]* 10.4 Write property test for pagination
+  - [x]* 10.4 Write property test for pagination
     - **Property 21: Notification pagination partitions the set**
     - **Validates: Requirements 7.1**
 
-  - [ ]* 10.5 Write property test for marking read
+  - [x]* 10.5 Write property test for marking read
     - **Property 22: Marking read is idempotent**
     - **Validates: Requirements 7.2**
 
-  - [ ]* 10.6 Write unit tests for the notification hooks
+  - [x]* 10.6 Write unit tests for the notification hooks
     - Test assignment and comment notifications
     - _Requirements: 7.1_
 
@@ -287,7 +287,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Compute cards per Column, cards completed this week and activity per member with SQLAlchemy joins in `analytics/service.py`
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-  - [ ]* 11.2 Write property test for analytics
+  - [x]* 11.2 Write property test for analytics
     - **Property 23: Analytics matches a reference model**
     - **Validates: Requirements 8.1**
 
@@ -300,32 +300,32 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Update only name and email, ignore `password`, return 409 for a duplicate email
     - _Requirements: 9.2, 9.3, 9.4_
 
-  - [ ]* 12.3 Write property test for the register and login round trip
+  - [x]* 12.3 Write property test for the register and login round trip
     - **Property 1: Register then login round trip**
     - **Validates: Requirements 1.1, 1.4, 9.1**
 
-  - [ ]* 12.4 Write property test for duplicate email
+  - [x]* 12.4 Write property test for duplicate email
     - **Property 2: Duplicate email is rejected**
     - **Validates: Requirements 1.2, 9.4**
 
-  - [ ]* 12.5 Write property test for profile update
+  - [x]* 12.5 Write property test for profile update
     - **Property 24: Profile update changes only name and email**
     - **Validates: Requirements 9.2, 9.3**
 
 - [x] 13. Backend cross-route tests and commit
-  - [ ]* 13.1 Write property test for invalid payloads
+  - [x]* 13.1 Write property test for invalid payloads
     - **Property 3: Invalid payloads are rejected with 400**
     - **Validates: Requirements 1.3, 3.5, 5.4, 6.5, 7.4, 11.4**
 
-  - [ ]* 13.2 Write property test for JWT enforcement
+  - [x]* 13.2 Write property test for JWT enforcement
     - **Property 6: Protected routes require a valid JWT**
     - **Validates: Requirements 1.7, 6.6**
 
-  - [ ]* 13.3 Write property test for access control
+  - [x]* 13.3 Write property test for access control
     - **Property 7: Access follows membership, role and ownership**
     - **Validates: Requirements 2.7, 2.8, 6.3, 6.4, 6.7, 7.3, 8.4, 31.4, 31.8**
 
-  - [ ]* 13.4 Write property test for unknown identifiers
+  - [x]* 13.4 Write property test for unknown identifiers
     - **Property 8: Unknown identifiers return 404**
     - **Validates: Requirements 2.6, 3.6, 4.7, 8.3**
 
@@ -413,23 +413,23 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - `lib/polyfills.ts`: feature-detected Popover polyfill, invoker-command, anchor-positioning, `focusgroup` and `closedby` fallbacks
     - _Requirements: 37.1, 37.2, 37.4, 37.5, 37.6, 37.10, 37.12, 39.5_
 
-  - [ ]* 15.7 Write property test for the Bearer header
+  - [x]* 15.7 Write property test for the Bearer header
     - **Property 32: Bearer header is sent when a JWT exists**
     - **Validates: Requirements 21.4**
 
-  - [ ]* 15.8 Write property test for ApiError
+  - [x]* 15.8 Write property test for ApiError
     - **Property 33: Non-2xx responses throw ApiError**
     - **Validates: Requirements 21.5**
 
-  - [ ]* 15.9 Write property test for error mapping
+  - [x]* 15.9 Write property test for error mapping
     - **Property 34: Every status maps to a toast message**
     - **Validates: Requirements 21.6, 21.7**
 
-  - [ ]* 15.10 Write property test for `computeOrder`
+  - [x]* 15.10 Write property test for `computeOrder`
     - **Property 29: Computed order lies between neighbours**
     - **Validates: Requirements 15.3, 4.6**
 
-  - [ ]* 15.11 Write property test for the route guard
+  - [x]* 15.11 Write property test for the route guard
     - **Property 26: Unauthenticated users are redirected**
     - **Validates: Requirements 12.6, 32.6**
 
@@ -488,27 +488,27 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Search the pages for raw `<button>` elements and replace each with BaseButton
     - _Requirements: 20.6, 27.5_
 
-  - [ ]* 16.12 Write property test for board display order
+  - [x]* 16.12 Write property test for board display order
     - **Property 27: Board display order**
     - **Validates: Requirements 14.1**
 
-  - [ ]* 16.13 Write property test for optimistic move and revert
+  - [x]* 16.13 Write property test for optimistic move and revert
     - **Property 28: Optimistic move, then revert on failure**
     - **Validates: Requirements 15.2, 15.4**
 
-  - [ ]* 16.14 Write property test for comment controls
+  - [x]* 16.14 Write property test for comment controls
     - **Property 30: Comment controls follow ownership**
     - **Validates: Requirements 16.4, 16.5**
 
-  - [ ]* 16.15 Write property test for the unread badge
+  - [x]* 16.15 Write property test for the unread badge
     - **Property 31: Unread badge reflects the count**
     - **Validates: Requirements 19.1, 19.3, 19.4**
 
-  - [ ]* 16.16 Write property test for the search debounce
+  - [x]* 16.16 Write property test for the search debounce
     - **Property 18: Search debounce**
     - **Validates: Requirements 5.3, 17.2**
 
-  - [ ]* 16.18 Write property test for drag and Move_Control equivalence
+  - [x]* 16.18 Write property test for drag and Move_Control equivalence
     - **Property 36: Drag and Move_Control produce the same move**
     - **Validates: Requirements 15.2, 15.3, 33.2**
 
@@ -532,11 +532,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Auto-fill grid of Board tiles (`minmax(18rem, 1fr)`, max width 140rem), role badge, avatar stack, "New board" tile opening BaseModal, empty state
     - _Requirements: 13.4, 38.3_
 
-  - [ ]* 16.23 Write property test for avatars
+  - [x]* 16.23 Write property test for avatars
     - **Property 38: Avatars are deterministic**
     - **Validates: Requirements 36.7**
 
-  - [ ]* 16.24 Write property test for the preference cookie
+  - [x]* 16.24 Write property test for the preference cookie
     - **Property 39: Preference cookie round trip**
     - **Validates: Requirements 36.5, 36.6**
 
@@ -562,7 +562,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Profile_Menu: the keyboard model, radio and checkbox `aria-checked` updates, Log out calls `logout()`
     - _Requirements: 35.5, 35.6, 35.8, 35.9, 36.2, 36.3, 36.4_
 
-  - [ ]* 18.3 Write example tests for the pages
+  - [x]* 18.3 Write example tests for the pages
     - Test forms, redirects and toasts for P1, P2, P3, P5 and P6
     - _Requirements: 12.3, 12.4, 12.5, 13.2, 17.3, 17.4, 18.2, 18.3_
 

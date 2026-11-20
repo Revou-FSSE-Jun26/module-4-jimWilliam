@@ -24,6 +24,8 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=float(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_HOURS", "24")))
     FRONTEND_ORIGINS = [o.strip() for o in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",") if o.strip()]
     JSON_SORT_KEYS = False
+    # None = werkzeug's default (scrypt). Tests use a cheap method so property tests can register many users.
+    PASSWORD_HASH_METHOD = None
 
 
 class TestConfig(Config):
@@ -34,3 +36,4 @@ class TestConfig(Config):
     JWT_SECRET_KEY = "test-secret-key-that-is-long-enough-for-hs256"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     FRONTEND_ORIGINS = ["http://localhost:3000"]
+    PASSWORD_HASH_METHOD = "pbkdf2:sha256:1000"

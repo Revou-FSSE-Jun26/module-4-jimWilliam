@@ -33,6 +33,7 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
   }
 
   const payload: { data?: T; error?: string } = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, payload.error ?? res.statusText ?? "Request failed");
+  // `||`, not `??`: an empty error string must fall back too (found by the Property 33 test).
+  if (!res.ok) throw new ApiError(res.status, payload.error || res.statusText || "Request failed");
   return payload.data as T;
 }

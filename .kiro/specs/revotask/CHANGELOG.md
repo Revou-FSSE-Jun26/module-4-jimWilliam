@@ -153,6 +153,13 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Why:** the Property 37 test (`__tests__/tokens.test.ts`) composites each fill over the brightest point of the background. Muted text on a pebble measured 4.00:1 and error text on a pebble 3.15:1, both below the 4.5:1 that R34.6 requires. All 30 checked pairs now pass in both themes.
 - **Refinement prompt:** "Run the token contrast test against the worst-case background and adjust the failing text colors and glass alphas until every pair meets 4.5:1 (text) and 3:1 (UI)."
 
+### 19. Property 29 promised more than FLOAT order can deliver (Minor)
+
+- **Before (Property 29):** "For any two neighbour order values `prev < next` … `computeOrder` returns a value strictly between them."
+- **After:** the property holds whenever a double-precision value exists between the neighbours; when none exists, precision is exhausted, which is the limitation already accepted under "Float precision" in Data Models.
+- **Why:** fast-check found the counterexample `prev = 999999999.9999987`, `next = 999999999.9999988`: adjacent doubles, so the midpoint equals one of them. R30.5 (a move updates one row) rules out rebalancing during a move, so the property was corrected rather than the code.
+- **Refinement prompt:** "fast-check shows computeOrder cannot stay strictly between adjacent doubles. Restate Property 29 with that precondition and link it to the documented float-precision limitation; keep rebalancing as a follow-up."
+
 ---
 
 ## v4 — Template for the next round

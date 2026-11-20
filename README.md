@@ -26,11 +26,11 @@ It has two parts: a Flask REST API (deployed on Railway) and a Next.js app with 
 
 1. **Brief.** The project brief (`specs/brief.md`) sets the overview, user roles (board member, board admin), core features, tech stack and non-functional requirements.
 2. **Specs with Kiro.** Kiro turned the brief into `requirements.md` (EARS acceptance criteria), `design.md` and `tasks.md`. The first output is kept in `specs-history/v1/`.
-3. **Critical review and refinement.** Each AI-generated document was checked line by line against the brief and the grading rubric. Every gap was fixed with a targeted refinement prompt and recorded with a before and after in `specs/CHANGELOG.md` (18 entries across rounds v2, v2.1 and v3). Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
+3. **Critical review and refinement.** Each AI-generated document was checked line by line against the brief and the grading rubric. Every gap was fixed with a targeted refinement prompt and recorded with a before and after in `specs/CHANGELOG.md` (19 entries across rounds v2, v2.1 and v3). Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
 4. **Steering guidelines first.** `guidelines/backend.md`, `database.md` and `frontend.md` hold 33 rules, each with a Rule, a Rationale and a RevoTask Example. They were committed before any code; `scripts/check-guidelines-first.ps1` verifies the order in the git history.
 5. **Generate, then review against the guidelines.** Code was generated task by task from `tasks.md` with the guidelines in context, and current library APIs were checked against live documentation (Context7 and the Next.js docs bundled in `node_modules`). `guidelines/ai-comparison.md` compares the same prompt with and without guidelines: 8 violations dropped to 0.
 6. **Violations documented and fixed.** `guidelines/violation-report.md` lists 6 violations found in generated code (for example, a removed focus ring, raw colour values instead of tokens, and missing error-status tests), each with the guideline it breaks and the fix.
-7. **Tests and docs.** pytest, Jest with React Testing Library, and Playwright cover the API, the components and the live user journeys. The tests also caught real bugs: a native drag that could not start from a button, an accessibility name mismatch, and design tokens that failed their own contrast targets.
+7. **Tests and docs.** pytest (with Hypothesis property tests), Jest with React Testing Library (with fast-check properties), and Playwright cover the API, the components and the live user journeys. Every correctness property in `design.md` has a test. The tests also caught real bugs: a native drag that could not start from a button, an accessibility name mismatch, design tokens that failed their own contrast targets, an empty API error message, and a property that FLOAT ordering cannot satisfy at the limits of precision.
 
 ## Features
 
@@ -44,7 +44,7 @@ It has two parts: a Flask REST API (deployed on Railway) and a Next.js app with 
 - **Analytics (admins):** cards per column, cards completed this week, and activity per member, computed with SQLAlchemy joins.
 - **Profile:** update your name and email with a live preview and an unsaved-changes indicator.
 - **Interface:** a curved glass sidebar with nested navigation (icon rail on tablets, swipeable drawer on phones), dark and light themes, optional animated background, a reduce-transparency setting, and layouts tested from 320 px to 3840 px.
-- **Tests:** 71 pytest tests, 61 Jest tests, and a Playwright suite (4 auth scenarios, an 8-step Kanban journey, and visual and accessibility checks).
+- **Tests:** 111 pytest tests (including 25 Hypothesis property tests at 100 examples each), 88 Jest tests (including 13 fast-check properties), and a Playwright suite (4 auth scenarios, an 8-step Kanban journey, and visual and accessibility checks).
 
 ## Technologies
 
@@ -52,7 +52,7 @@ It has two parts: a Flask REST API (deployed on Railway) and a Next.js app with 
 |---|---|
 | Backend | Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Cors, Marshmallow, PostgreSQL (psycopg 3), python-dotenv, Gunicorn |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, react-hot-toast |
-| Testing | pytest, Jest, React Testing Library, Playwright, axe-core |
+| Testing | pytest, Hypothesis, Jest, React Testing Library, fast-check, Playwright, axe-core |
 | Deployment | Railway (Flask API and PostgreSQL), Vercel (Next.js) |
 | AI tools | Kiro and Kiro CLI (specs, steering, generation, tests and docs), with Claude Code used for review and implementation |
 
@@ -116,7 +116,8 @@ npm run dev                 # http://localhost:3000
 
 ```bash
 cd backend
-pytest -v
+pytest -v                                   # 100 examples per property test
+HYPOTHESIS_PROFILE=quick pytest -v          # faster local run (15 examples)
 # Against PostgreSQL instead of in-memory SQLite:
 TEST_DATABASE_URL=postgresql://user:pass@localhost:5432/revotask_test pytest -v
 ```

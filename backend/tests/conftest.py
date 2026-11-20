@@ -1,7 +1,16 @@
 """Shared pytest fixtures: an app on an in-memory database, a client, and API helpers."""
 import itertools
+import os
 
 import pytest
+from hypothesis import HealthCheck, settings
+
+# Property tests (design "Testing Strategy"): at least 100 examples each. The app and database are
+# shared across a test's examples, so every example creates its own users and boards for isolation.
+_common = dict(deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow])
+settings.register_profile("default", max_examples=100, **_common)
+settings.register_profile("quick", max_examples=15, **_common)
+settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "default"))
 
 from app import create_app
 from app.config import TestConfig
