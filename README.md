@@ -152,7 +152,7 @@ Sign in with the shared demo account to explore a board that already has columns
   <tr>
     <td valign="top">
       <h4>🪟 Sea-glass interface</h4>
-      A curved glass sidebar with nested navigation (an icon rail on tablets and a swipeable drawer on phones), dark and light themes, and layouts tested from 320 px to 3840 px.
+      A full-height curved glass sidebar with a lit rim and nested navigation (an icon rail on tablets and a swipeable drawer on phones), dark and light themes, and layouts tested from 320 px to 3840 px.
     </td>
     <td valign="top">
       <h4>♿ Accessible by design</h4>
@@ -229,12 +229,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>21 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
+    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>22 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
 ```
 
 1. **Brief.** `specs/brief.md` sets the overview, the two user roles, the core features, the tech stack and the non-functional requirements.
 2. **Specs with Kiro.** Kiro turned the brief into `requirements.md` (EARS acceptance criteria), `design.md` and `tasks.md`. The first version is kept in `specs-history/v1/`.
-3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 21 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
+3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 22 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
 4. **Steering guidelines first.** `guidelines/` holds 33 rules (backend, database, frontend), each with a Rule, a Rationale and a RevoTask Example. They were committed before any code, and `scripts/check-guidelines-first.ps1` verifies that order in the git history.
 5. **Generate, then review.** Code was generated task by task with the guidelines in context, and library APIs were checked against current documentation (Context7 and the Next.js docs bundled with the package). `guidelines/ai-comparison.md` compares the same prompt with and without guidelines: 8 violations dropped to 0.
 6. **Violations documented.** `guidelines/violation-report.md` lists 6 violations found in generated code, each with the guideline it breaks and the fix.
@@ -398,7 +398,7 @@ revotask/
 | [`specs/requirements.md`](specs/requirements.md) | 39 requirements with EARS acceptance criteria |
 | [`specs/design.md`](specs/design.md) | Architecture, routes, UI/UX design system, 40 correctness properties, traceability |
 | [`specs/tasks.md`](specs/tasks.md) | The implementation plan, with progress |
-| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 21 refinements, each with a before and an after |
+| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 22 refinements, each with a before and an after |
 | [`guidelines/`](guidelines/) | Steering guidelines, the AI output comparison and the violation report |
 | [`docs/postman/`](docs/postman/) | Postman collection and environment for the deployed API |
 

@@ -178,6 +178,13 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Why:** the project owner asked for a profile photo stored as AVIF with the original deleted, a clickable but download-protected picture, image attachments on cards and a full formatting toolbar. Vercel's filesystem is read-only, so images go in the database. `<img>` tags cannot send the JWT and the API is on another domain, so Signed_URLs carry their own credential. User HTML is only safe to render after server-side sanitising, so the API (not the editor) is the trust boundary. Library APIs were checked in Context7 (Pillow 13 AVIF options, TipTap 3 StarterKit with Underline and Link). Blocking right-click is only a deterrent, and the requirement says so rather than promising DRM.
 - **Refinement prompt:** "The profile tab is doubled; keep the one at the bottom. Let users change their profile picture, convert it to AVIF and delete the original. The picture can be clicked but is protected from download (no right-click). Allow image attachments on cards, and give the description a full rich-text toolbar (bold, italic, underline, etc.)."
 
+### 22. Full-height sidebar with one scroller (project owner's request)
+
+- **Before (R35.1, R35.5, design "Curved Sidebar"):** the Sidebar floated 0.75rem from the viewport edges, and the Boards list had its own `max-height: 40dvh` scroller inside the scrolling nav. With a few boards and one expanded, the list was cut off half-way through the current page's pill while empty space was left below My tasks.
+- **After:** the Sidebar runs the full viewport height, flush with the start edge, with a lit curved rim and a tide decoration behind the Profile_Capsule. The nav is the only scroller; its scrollbar is hidden and its edges fade with a scroll-driven animation (a thin scrollbar remains where that is unsupported). Dashboard and My tasks come before Boards; boards have colour dots, open card counts and guide lines. New R35.11; R35.5 no longer lists Profile (removed in entry 21).
+- **Why:** the project owner saw a scrollbar in the sidebar and asked for a more interesting, full-height design. Two nested scrollers made the cut-off likely, and a floating pane wasted height on small laptops. The visual suite's settle helper waited for every running animation to finish; scroll-driven animations never finish, so it now skips them.
+- **Refinement prompt:** "There was a scroll in the sidebar. Change the design to be more interesting and full height."
+
 ---
 
 ## v5 — Template for the next round

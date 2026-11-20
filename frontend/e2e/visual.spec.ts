@@ -62,8 +62,13 @@ const PAGES = () => [
 ];
 
 /** Waits until entrance animations finish (an observable condition, not a fixed sleep). */
+/** Time-based animations have finished. Scroll-driven ones (the sidebar's edge fade) never "finish", so they are skipped. */
 async function settled(page: Page) {
-  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running" || (a.effect?.getTiming().iterations ?? 1) === Infinity));
+  await page.waitForFunction(() =>
+    document.getAnimations().every(
+      (a) => a.playState !== "running" || !(a.timeline instanceof DocumentTimeline) || (a.effect?.getTiming().iterations ?? 1) === Infinity,
+    ),
+  );
 }
 
 async function checkLayout(page: Page, where: string) {

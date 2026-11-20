@@ -499,27 +499,163 @@ dialog.base-modal[open]::backdrop { opacity: 1; }
    ========================================================================== */
 .sidebar {
   position: fixed;
-  inset-block: 0.75rem;
-  inset-inline-start: 0.75rem;
+  inset-block: 0;
+  inset-inline-start: 0;
   z-index: 30;
   display: none;
   flex-direction: column;
-  gap: 1rem;
-  inline-size: 5.25rem;
-  padding: 1.25rem 0.75rem 1rem;
-  border-radius: 1.5rem;
-  /* One continuous outward arc along the inline-end edge, like the rim of a lens. */
-  border-start-end-radius: 3rem 50%;
-  border-end-end-radius: 3rem 50%;
+  gap: 0.75rem;
+  inline-size: 5.5rem;
+  padding: 1.25rem 1.25rem 0.875rem 0.75rem;
+  /* Full height and flush with the inline-start edge; only the curved edge keeps a rim. */
+  border-block: 0;
+  border-inline-start: 0;
+  border-radius: 0;
+  /* One continuous outward arc along the inline-end edge, top to bottom, like the rim of a lens. */
+  border-start-end-radius: 2.75rem 50%;
+  border-end-end-radius: 2.75rem 50%;
+  box-shadow: inset 0 1px 0 var(--highlight), var(--elev-2),
+    1.5rem 0 3.75rem -2.25rem color-mix(in srgb, var(--seaglass) 45%, transparent);
 }
 @media (width >= 48rem) { .sidebar { display: flex; } }
-@media (width >= 80rem) { .sidebar { inline-size: 17rem; padding-inline: 1rem 2rem; } }
+/* Rail: a shallower curve, so the bottom of the arc never cuts into the profile capsule. */
+@media (width >= 48rem) and (width < 80rem) {
+  .sidebar { border-start-end-radius: 1.75rem 50%; border-end-end-radius: 1.75rem 50%; }
+}
+/* The curve bulges outward mid-height, so the nav can run closer to the edge than the capsule. */
+@media (width >= 80rem) {
+  .sidebar { inline-size: 18rem; padding-inline: 1rem 1.5rem; }
+  .sidebar-foot { padding-inline-end: 0.75rem; }
+}
 .app-main {
   min-block-size: 100dvh;
   padding: 0.75rem;
 }
-@media (width >= 48rem) { .app-main { padding-inline-start: calc(5.25rem + 1.5rem); } }
-@media (width >= 80rem) { .app-main { padding-inline-start: calc(17rem + 1.5rem); } }
+@media (width >= 48rem) { .app-main { padding-inline-start: calc(5.5rem + 1rem); } }
+@media (width >= 80rem) { .app-main { padding-inline-start: calc(18rem + 1.25rem); } }
+
+/* A lit rim that follows the curve: sea glass fading into buoy amber and back. */
+.sidebar-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(180deg, transparent 3%,
+    color-mix(in srgb, var(--seaglass) 85%, transparent) 26%,
+    color-mix(in srgb, var(--buoy) 60%, transparent) 54%,
+    color-mix(in srgb, var(--seaglass) 75%, transparent) 80%, transparent 97%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  clip-path: inset(0 0 0 50%);   /* the curved inline-end side only */
+  opacity: 0.75;
+  pointer-events: none;
+}
+.sidebar-head {
+  flex: none;
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid color-mix(in srgb, var(--rim) 80%, transparent);
+}
+.sidebar-foot {
+  position: relative;
+  flex: none;
+  padding-block-start: 0.5rem;
+}
+
+/* Tide: two soft swells behind the profile capsule, clipped by the sidebar's own curve. */
+.sidebar-tide-clip {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+.sidebar-tide {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: -5%;
+  inline-size: 110%;
+  block-size: 9.5rem;
+}
+.sidebar-tide .tide-back { fill: color-mix(in srgb, var(--seaglass) 11%, transparent); }
+.sidebar-tide .tide-front { fill: color-mix(in srgb, var(--seaglass) 17%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-bg-motion="on"] .sidebar-tide .tide-back { animation: tide-drift 14s ease-in-out infinite alternate; }
+  :root[data-bg-motion="on"] .sidebar-tide .tide-front { animation: tide-drift 10s ease-in-out infinite alternate-reverse; }
+}
+@keyframes tide-drift { to { translate: -1.25rem 0.25rem; } }
+@media (forced-colors: active) {
+  .sidebar-rim, .sidebar-tide { display: none; }
+  .sidebar { border-inline-end: 1px solid CanvasText; }
+}
+
+/* One scroller: the Nav_Tree scrolls as a whole, without a visible scrollbar where the browser can
+   fade the edges instead (scroll-driven animation); elsewhere a thin tinted scrollbar remains. */
+@property --fade-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --fade-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
+.nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--seaglass) 35%, transparent) transparent;
+  padding-block: 0.125rem;
+}
+@supports (animation-timeline: scroll()) {
+  .nav-scroll {
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
+    animation: nav-fade linear both;
+    animation-timeline: scroll(self block);
+  }
+  .nav-scroll::-webkit-scrollbar { display: none; }
+}
+@keyframes nav-fade {
+  0% { --fade-top: 0px; --fade-bottom: 2.5rem; }
+  8% { --fade-top: 2.5rem; }
+  92% { --fade-bottom: 2.5rem; }
+  100% { --fade-top: 2.5rem; --fade-bottom: 0px; }
+}
+
+/* Boards: a guide line joins each board to the group, and each board to its pages. */
+/* minmax(0, 1fr): long board names truncate instead of widening the grid past the sidebar. */
+.nav-arc, .nav-sub { grid-template-columns: minmax(0, 1fr); }
+.nav-sub.nav-boards {
+  margin-inline-start: 1.35rem;
+  padding-inline-start: 0.25rem;
+  border-inline-start: 1px solid color-mix(in srgb, var(--seaglass) 28%, transparent);
+}
+.nav-sub.nav-branch {
+  margin-inline-start: 1.05rem;
+  padding-inline-start: 0.6rem;
+  border-inline-start: 1px dashed color-mix(in srgb, var(--seaglass) 30%, transparent);
+}
+.nav-board { gap: 0.6rem; }
+.board-dot {
+  flex: none;
+  inline-size: 0.625rem;
+  block-size: 0.625rem;
+  border-radius: 45% 55% 50% 50%;
+  background: hsl(var(--board-hue, 170) 45% 62%);
+  background: oklch(0.74 0.11 var(--board-hue, 170));
+  box-shadow: 0 0 0 3px oklch(0.74 0.11 var(--board-hue, 170) / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.5);
+}
+.nav-count {
+  flex: none;
+  min-inline-size: 1.5rem;
+  padding: 0.0625rem 0.4rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--seaglass) 14%, transparent);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.nav-count + svg { margin-inline-start: 0.125rem; }
+@media (forced-colors: active) {
+  .board-dot { forced-color-adjust: none; border: 1px solid CanvasText; }
+}
 
 /* Items follow the arc: middle items sit slightly further out. Static, no motion. */
 @supports (translate: calc(sin(1deg) * 1px)) {
@@ -580,6 +716,8 @@ dialog.base-modal[open]::backdrop { opacity: 1; }
   }
   .sidebar .nav-link:is(:hover, :focus-visible) .nav-label-rail { opacity: 1; }
   .sidebar .rail-hide { display: none; }
+  .sidebar .nav-scroll { overflow: visible; -webkit-mask-image: none; mask-image: none; animation: none; }
+  .sidebar .sidebar-head { border-block-end: 0; padding-block-end: 0.25rem; }
   /* CSS decides from the first paint, so the Boards list never flashes inline before hydration
      turns it into the rail flyout. */
   .sidebar .nav-arc > li > ul:not(:popover-open) { display: none; }

@@ -698,6 +698,17 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - `__tests__/media-and-editor.test.tsx` and `e2e/media.spec.ts` (AVIF upload, protected lightbox, formatted description after reload)
     - _Requirements: 40.1, 41.5, 42.5, 43.4_
 
+- [x] 24. Full-height sidebar (refinement round v4)
+  - [x] 24.1 Make the Sidebar full height with a lit curved rim and the tide decoration
+    - _Requirements: 35.1, 35.2_
+
+  - [x] 24.2 Scroll the Nav_Tree as one list with faded edges; reorder items; add board dots and counts
+    - _Requirements: 35.5, 35.11_
+
+  - [x] 24.3 Re-run the visual suite at 7 widths in both themes and refresh the screenshots
+    - The settle helper skips scroll-driven animations, which never finish
+    - _Requirements: 38.1, 39.6_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
@@ -736,7 +747,9 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 18, "tasks": ["23.1", "23.2", "23.4"]},
     {"id": 19, "tasks": ["23.3", "23.5", "23.6", "23.7", "23.9"]},
     {"id": 20, "tasks": ["23.8", "23.10", "23.11"]},
-    {"id": 21, "tasks": ["23.12", "23.13"]}
+    {"id": 21, "tasks": ["23.12", "23.13", "24.1"]},
+    {"id": 22, "tasks": ["24.2"]},
+    {"id": 23, "tasks": ["24.3"]}
   ]
 }
 ```

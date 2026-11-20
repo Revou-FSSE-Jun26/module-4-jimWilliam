@@ -492,16 +492,17 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 
 #### Acceptance Criteria
 
-1. WHILE the viewport is at least 1280 px wide, THE Sidebar SHALL show as an expanded Glass_Pane inset 0.75rem from the viewport edges, with an outward-curved inline-end edge, icons and text labels.
-2. WHILE the viewport is from 768 px to 1279 px wide, THE Sidebar SHALL show as an icon rail with the same curved edge, and each icon link SHALL show its text label on hover and on keyboard focus.
+1. WHILE the viewport is at least 1280 px wide, THE Sidebar SHALL show as an expanded Glass_Pane that runs the full height of the viewport, flush with the inline-start edge, with an outward-curved inline-end edge carrying a lit rim, icons and text labels.
+2. WHILE the viewport is from 768 px to 1279 px wide, THE Sidebar SHALL show as a full-height icon rail with a shallower curved edge, and each icon link SHALL show its text label on hover and on keyboard focus.
 3. WHILE the viewport is narrower than 768 px, THE Frontend SHALL hide the Sidebar and show a menu button in the Top_Bar that opens the Nav_Drawer.
 4. THE Nav_Drawer SHALL slide in from the inline-start edge and SHALL close on a swipe toward that edge, a tap on the backdrop, its Close button, or the Escape key.
-5. THE Nav_Tree SHALL contain Dashboard, a Boards group, My Tasks and Profile; the Boards group SHALL contain one nested group per Board the User belongs to, and each Board group SHALL contain links to the Board, its Members panel and its Analytics panel, with Members and Analytics shown only to Board_Admins.
+5. THE Nav_Tree SHALL contain Dashboard, My Tasks and a Boards group, in that order; the Boards group SHALL show the number of Boards and contain one nested group per Board the User belongs to, each marked with a colour dot derived from the Board id and its open card count when it has any, and each Board group SHALL contain links to the Board, its Members panel and its Analytics panel, with Members and Analytics shown only to Board_Admins.
 6. WHEN a User activates a group trigger in the expanded Sidebar or the Nav_Drawer, THE Nav_Tree SHALL expand or collapse that group in place.
 7. WHEN a User activates a group trigger in the icon rail, THE Nav_Tree SHALL open that group as a flyout beside the trigger, anchored to it and flipped to stay inside the viewport.
 8. THE Nav_Tree SHALL use `<a href>` links for destinations and `<button>` group triggers with `aria-expanded` and `aria-controls`, and SHALL NOT use `role="menu"`, so that users move through it with Tab.
 9. THE Nav_Tree SHALL mark the current page with `aria-current="page"` and an indicator that does not rely on color alone.
 10. THE Frontend SHALL keep the expanded or collapsed state of each Nav_Tree group across navigations within the browser session.
+11. THE Sidebar SHALL keep the brand at the top and the Profile_Capsule at the bottom, and SHALL scroll only the Nav_Tree as a whole (never a nested list inside it); where the browser supports scroll-driven animations the scrollbar SHALL be hidden and the scrolled edges SHALL fade, otherwise a thin tinted scrollbar SHALL show.
 
 ### Requirement 36: Profile capsule, profile menu and profile page
 

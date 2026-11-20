@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ViewTransition, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 
+import { avatarHue } from "@/lib/avatar";
 import { positionFallback } from "@/lib/polyfills";
 import type { Board } from "@/lib/types";
 
@@ -143,6 +144,7 @@ export function NavTree({ boards, shell, onNavigate }: { boards: Board[]; shell:
 
   const items: { key: string; node: ReactNode }[] = [
     { key: "dashboard", node: <NavLink href="/" label="Dashboard" icon={ICONS.dashboard} current={pathname === "/"} shell={shell} onNavigate={navigate} /> },
+    { key: "tasks", node: <NavLink href="/my-tasks" label="My tasks" icon={ICONS.tasks} current={pathname === "/my-tasks"} shell={shell} onNavigate={navigate} /> },
     {
       key: "boards",
       node: (
@@ -157,13 +159,14 @@ export function NavTree({ boards, shell, onNavigate }: { boards: Board[]; shell:
           >
             <Icon d={ICONS.boards} />
             <span className="nav-label nav-label-rail">Boards</span>
-            <svg aria-hidden="true" viewBox="0 0 24 24" className={`rail-hide ms-auto size-4 transition-transform duration-150 ${open.boards && !rail ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth="2"><path d={ICONS.chevron} /></svg>
+            {boards.length > 0 && <span className="nav-count rail-hide ms-auto" aria-hidden="true">{boards.length}</span>}
+            <svg aria-hidden="true" viewBox="0 0 24 24" className={`rail-hide shrink-0 ${boards.length > 0 ? "" : "ms-auto "}size-4 transition-transform duration-150 ${open.boards && !rail ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth="2"><path d={ICONS.chevron} /></svg>
           </button>
           <ul
             ref={boardsListRef}
             id={boardsListId}
             hidden={!rail && !open.boards}
-            className={rail ? "menu-popover place-side glass-raised max-h-[70dvh] overflow-y-auto" : "nav-sub max-h-[40dvh] overflow-y-auto overscroll-contain"}
+            className={rail ? "menu-popover place-side glass-raised nav-boards max-h-[70dvh] overflow-y-auto" : "nav-sub nav-boards"}
           >
             {boards.length === 0 && <li className="px-3 py-2 text-sm text-muted">No boards yet</li>}
             {boards.map((board) => {
@@ -173,11 +176,22 @@ export function NavTree({ boards, shell, onNavigate }: { boards: Board[]; shell:
               const expanded = open[key] ?? pathname === base; // the current board starts expanded
               return (
                 <li key={board.id}>
-                  <button type="button" className="nav-link" aria-expanded={expanded} aria-controls={listId} onClick={() => toggle(key, expanded)}>
+                  <button
+                    type="button"
+                    className="nav-link nav-board"
+                    aria-expanded={expanded}
+                    aria-controls={listId}
+                    onClick={() => toggle(key, expanded)}
+                    style={{ ["--board-hue" as string]: avatarHue(board.id) }}
+                  >
+                    <span className="board-dot" aria-hidden="true" />
                     <span className="nav-label">{board.name}</span>
-                    <svg aria-hidden="true" viewBox="0 0 24 24" className={`ms-auto size-4 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth="2"><path d={ICONS.chevron} /></svg>
+                    {(board.card_count ?? 0) > 0 && (
+                      <span className="nav-count ms-auto" aria-hidden="true" title={`${board.card_count} ${board.card_count === 1 ? "card" : "cards"}`}>{board.card_count}</span>
+                    )}
+                    <svg aria-hidden="true" viewBox="0 0 24 24" className={`shrink-0 ${(board.card_count ?? 0) > 0 ? "" : "ms-auto "}size-4 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth="2"><path d={ICONS.chevron} /></svg>
                   </button>
-                  <ul id={listId} hidden={!expanded} className="nav-sub">
+                  <ul id={listId} hidden={!expanded} className="nav-sub nav-branch">
                     <li><NavLink href={base} label="Board" current={pathname === base} shell={shell} onNavigate={navigate} sub /></li>
                     {board.role === "admin" && (
                       <>
@@ -193,11 +207,10 @@ export function NavTree({ boards, shell, onNavigate }: { boards: Board[]; shell:
         </>
       ),
     },
-    { key: "tasks", node: <NavLink href="/my-tasks" label="My tasks" icon={ICONS.tasks} current={pathname === "/my-tasks"} shell={shell} onNavigate={navigate} /> },
   ];
 
   return (
-    <nav aria-label="Main" className="min-h-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain">
+    <nav aria-label="Main" className="nav-scroll min-h-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain">
       <ul className="nav-arc grid gap-1">
         {items.map((item, i) => (
           <li key={item.key} style={{ ["--t" as string]: items.length > 1 ? i / (items.length - 1) : 0 }}>
