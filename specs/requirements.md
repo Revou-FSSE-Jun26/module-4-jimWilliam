@@ -16,7 +16,9 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 - **RevoTask**: The complete system, made of the Backend and the Frontend.
 - **Backend**: The Flask REST API deployed on Vercel, using a Supabase PostgreSQL database.
 - **Frontend**: The Next.js web application deployed on Vercel.
-- **Blueprint**: A Flask blueprint package under `app/blueprints/<name>/` containing `routes.py`, `service.py` and `schema.py`. The eight Blueprints are auth, boards, columns, cards, comments, notifications, analytics and users.
+- **Blueprint**: A Flask blueprint package under `app/blueprints/<name>/` containing `routes.py`, `service.py` and `schema.py`. The brief's eight Blueprints are auth, boards, columns, cards, comments, notifications, analytics and users; a ninth, media, holds card images and signed image delivery (R42, R43).
+- **Media**: An uploaded image stored by the Backend as AVIF: a User's avatar or a Card attachment.
+- **Signed_URL**: A short-lived image URL carrying its own expiry and HMAC signature, so `<img>` tags can load it without the JWT.
 - **Envelope**: The Backend JSON response format. A success response is `{"data": ...}`. An error response is `{"error": "..."}`.
 - **User**: A registered person with a name, email and password.
 - **Board**: A container with a `name` that holds Columns. Each Board has one or more Board_Admins.
@@ -564,3 +566,54 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 4. THE Frontend SHALL show a `:focus-visible` ring on every interactive element with a contrast of at least 3:1 against its surroundings.
 5. WHERE a control is revealed on hover, THE Frontend SHALL also reveal it on keyboard focus within its parent, and SHALL show it at all times on devices without hover.
 6. WHEN the accessibility scan runs on every page in both themes, THE scan SHALL report no violations of serious or critical impact.
+
+### Requirement 40: Rich-text Card description
+
+**User Story:** As a Board_Member, I want to format a Card description with bold, italic, underline, headings, lists, quotes, code and links, so that longer notes are easy to read.
+
+#### Acceptance Criteria
+
+1. THE CardDetailModal SHALL edit the description in a rich-text editor with a toolbar for bold, italic, underline, strikethrough, inline code, link, heading, subheading, bulleted list, numbered list, quote, code block, divider, clear formatting, undo and redo, and SHALL support the standard keyboard shortcuts (Ctrl/Cmd+B, I, U, Z).
+2. THE toolbar SHALL follow the WAI-ARIA toolbar pattern: one tab stop, arrow keys, Home and End move between buttons, and toggle buttons expose `aria-pressed`.
+3. WHEN a description is created or updated, THE Backend SHALL sanitise it to an allow-list of tags (p, br, strong, b, em, i, u, s, code, pre, blockquote, ul, ol, li, h2, h3, a, hr), SHALL keep only the `href` attribute on links, SHALL allow only http, https and mailto links, and SHALL set `rel="noopener noreferrer nofollow"` and `target="_blank"` on every link.
+4. WHEN a description contains no markup, THE Backend SHALL escape it and store each non-empty line as a paragraph; WHEN a description has no text after sanitising, THE Backend SHALL store null.
+5. THE Backend SHALL store a plain-text copy of each description, SHALL search descriptions by that copy rather than by markup, and SHALL reject a description whose plain text is longer than 5000 characters with status 400.
+6. THE My Tasks page SHALL preview a Card's description as plain text.
+
+### Requirement 41: Profile photo
+
+**User Story:** As a User, I want to upload a profile photo, so that teammates recognise me on cards, comments and member lists.
+
+#### Acceptance Criteria
+
+1. WHEN an authenticated User sends POST /api/users/me/avatar with one image in the form field `file`, THE Backend SHALL centre-crop it to a square of at most 512 px, encode it as AVIF, store only the AVIF, and return status 200 with the User including `avatar_url`.
+2. THE Backend SHALL never write the uploaded original file to disk or to the database, and SHALL drop EXIF, XMP and comment metadata when re-encoding.
+3. WHEN a User uploads a new photo, THE Backend SHALL delete the previous one in the same transaction; WHEN a User sends DELETE /api/users/me/avatar, THE Backend SHALL delete the photo and return the User with `avatar_url` null.
+4. THE Backend SHALL include `avatar_url` in the User, member, Card assignee, Comment author and attachment uploader shapes, and THE Avatar component SHALL show the photo when present and fall back to initials (R36.7) when there is none or the image fails to load.
+5. THE /profile page SHALL let the User add, change and remove the photo, and clicking the photo SHALL open it full size in a lightbox.
+6. THE Frontend SHALL NOT show a separate "Profile" link in the main navigation; the Profile_Capsule menu is the way to /profile.
+
+### Requirement 42: Card image attachments
+
+**User Story:** As a Board_Member, I want to attach images to a Card, so that screenshots and photos live next to the task.
+
+#### Acceptance Criteria
+
+1. WHEN a Board_Member sends POST /api/cards/<id>/attachments with one image in the form field `file`, THE Backend SHALL store an AVIF no larger than 2048 px on its longest side plus an AVIF thumbnail no larger than 480 px, and return status 201 with the attachment.
+2. THE Backend SHALL return a Card's attachments from GET /api/cards/<id>/attachments to Board_Members only, SHALL return 404 for a deleted Card, and SHALL include `attachment_count` on each Card in the Board detail.
+3. THE Backend SHALL reject an eleventh attachment on one Card with status 400.
+4. WHEN a User sends DELETE /api/attachments/<id>, THE Backend SHALL delete it only if the User uploaded it or is an admin of the Board, and SHALL return 403 otherwise.
+5. THE CardDetailModal SHALL list attachments as thumbnails, accept uploads from a file picker or by dropping image files, open a thumbnail full size in a lightbox, and show the remove control only to the uploader and Board admins, with a confirmation step.
+6. THE Card on the Kanban SHALL show the number of attachments when it has any.
+
+### Requirement 43: Image safety and delivery
+
+**User Story:** As a User, I want uploaded images to be safe and hard to copy casually, so that board content stays within the team.
+
+#### Acceptance Criteria
+
+1. THE Backend SHALL accept only JPEG, PNG, WebP, GIF, AVIF, BMP and TIFF images of at most 40 megapixels and 4 MB, and SHALL reject anything else with status 400 (413 above 4 MB) without storing it.
+2. THE Backend SHALL serve images only from GET /api/media/<id> with a Signed_URL whose HMAC signature covers the image id, variant and expiry, valid for one to two hours; a missing, altered or expired signature SHALL return 403 and a deleted image 404.
+3. THE image response SHALL have `Content-Type: image/avif`, `Content-Disposition: inline`, `X-Content-Type-Options: nosniff` and a private cache lifetime that ends at the URL's expiry.
+4. THE Frontend SHALL show every uploaded image through a protected image component that blocks the context menu, dragging, selection and the iOS long-press callout, with a transparent shield over the image, and SHALL hide images when printing.
+5. THE Frontend SHALL check the file type and the 4 MB limit before uploading and show a toast for a rejected file.

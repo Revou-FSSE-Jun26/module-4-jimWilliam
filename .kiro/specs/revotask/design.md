@@ -134,8 +134,14 @@ All routes are under `/api`. "JWT" means `@jwt_required()`.
 | B27 | GET /api/boards/<id>/members | boards | member | 200 member list | 401, 403, 404 |
 | B28 | POST /api/boards/<id>/members | boards | admin | 201 membership | 400, 401, 403, 404, 409 |
 | B29 | DELETE /api/boards/<id>/members/<user_id> | boards | admin | 200 | 401, 403, 404, 409 |
+| B30 | POST /api/users/me/avatar (multipart `file`) | users | yes | 200 User with `avatar_url` | 400, 401, 413 |
+| B31 | DELETE /api/users/me/avatar | users | yes | 200 User | 401 |
+| B32 | GET /api/cards/<id>/attachments | media | member | 200 attachment list | 401, 403, 404 |
+| B33 | POST /api/cards/<id>/attachments (multipart `file`) | media | member | 201 attachment | 400, 401, 403, 404, 413 |
+| B34 | DELETE /api/attachments/<id> | media | uploader or admin | 200 | 401, 403, 404 |
+| B35 | GET /api/media/<id>?v=full or thumb&exp&sig | media | no (Signed_URL) | 200 `image/avif` bytes | 403, 404 |
 
-"member" and "admin" in the JWT column mean `@jwt_required()` plus `require_member(...)` or `require_member(..., admin=True)`. B27–B29 live in the boards Blueprint, so the Blueprint count stays at the eight the brief names. Every route can also return 500 from the global handler (R11.6).
+"member" and "admin" in the JWT column mean `@jwt_required()` plus `require_member(...)` or `require_member(..., admin=True)`. B27–B29 live in the boards Blueprint. B32–B35 are in a ninth Blueprint, `media`, added with R42 and R43; the eight the brief names are unchanged. Every route can also return 500 from the global handler (R11.6).
 
 ### Frontend pages
 
@@ -499,6 +505,22 @@ The menu follows the popup menu pattern (R36.2–R36.4):
 
 `lib/avatar.ts` takes the initials from the first letters of the first and last words of the name (at most 2, uppercased) and the hue from an FNV-1a hash of the User id modulo 360. The background is `hsl(<hue> 45% 70%)` followed by `oklch(0.75 0.1 <hue>)` (the second declaration wins where supported), with `--color-abyss` text in both themes. The same User has the same colour everywhere (R36.7).
 
+With a photo (R41.4), the Avatar renders the AVIF through ProtectedImage inside the same circle; if the image fails to load (for example a Signed_URL that expired while the page stayed open), it falls back to the initials.
+
+### Media and rich text (R40–R43)
+
+**Upload pipeline (backend `app/common/images.py`):** the request body (at most 4 MB, `MAX_CONTENT_LENGTH`, under Vercel's 4.5 MB limit) is read into memory. Pillow opens it with `formats=("JPEG","PNG","WEBP","GIF","AVIF","BMP","TIFF")`, refuses more than 40 megapixels before decoding (decompression-bomb warnings are errors), applies the EXIF orientation, converts to RGB or RGBA, clears `info` (EXIF, XMP, comments; the ICC profile is kept) and saves AVIF at speed 8. Avatars use `ImageOps.fit` to a square of at most 512 px at quality 70; attachments are resized to 2048 px (quality 65) and 480 px (quality 55). The original bytes go out of scope with the request.
+
+**Signed_URL (`app/common/media_urls.py`):** `/api/media/<id>?v=<variant>&exp=<unix>&sig=<hex>`, where `sig` is the first 32 hex characters of HMAC-SHA256 over `"<id>:<variant>:<exp>"` with a key derived from the JWT secret (`sha256("revotask-media-v1:" + secret)`, so the JWT key itself never signs URLs). `exp` is the next hour boundary plus one hour, so a URL is stable for an hour (browser cache hits) and lives one to two hours. Verification uses `hmac.compare_digest`. The API returns paths; `mediaUrl()` in `lib/apiClient.ts` prefixes the API host.
+
+**Rich text:** the editor is TipTap 3 (`@tiptap/react`, `@tiptap/starter-kit`, which includes Underline and Link in v3) with `immediatelyRender: false` for Next.js. The Backend sanitises with nh3 (the Rust `ammonia` library) in `app/common/richtext.py`: the R40.3 allow-list, `link_rel="noopener noreferrer nofollow"`, `target="_blank"` forced on links, comments stripped. Sanitising is idempotent. Stored HTML is safe to render; the editor is the only renderer.
+
+**ProtectedImage (`components/shared/ProtectedImage.tsx`):** a wrapper `span` with `onContextMenu` and `onDragStart` prevented, an `<img draggable={false} referrerPolicy="no-referrer">` with `pointer-events: none`, `user-select: none`, `-webkit-user-drag: none` and `-webkit-touch-callout: none`, and a transparent `.protected-shield` on top that receives clicks. Images are hidden in print. This is a deterrent, not DRM: screenshots and developer tools still work, which is why delivery also relies on Signed_URLs.
+
+**ImageLightbox (`components/shared/ImageLightbox.tsx`):** a native `<dialog>` rendered into `<body>` with a portal, so it opens above the CardDetailModal without nesting dialogs or `backdrop-filter`. It has a solid dark backdrop (no glass, so images read true); Escape, the close button and a backdrop click close it.
+
+**CardAttachments (`components/CardAttachments.tsx`):** loads B32 when the modal opens, uploads each chosen or dropped file through B33 in turn, shows a thumbnail grid (`auto-fill`, 7.5rem minimum), and a remove button (revealed on hover or focus) with a Remove/Keep confirmation for the uploader and admins.
+
 ### Interaction states
 
 | Element | Hover (`hover: hover` only) | Press | Focus-visible | Disabled |
@@ -600,13 +622,18 @@ class Card(db.Model):
 
 | Table | Columns besides id, created_at, updated_at |
 |---|---|
-| users | name, email (unique), password_hash |
+| users | name, email (unique), password_hash, avatar_id (UUID of a media row; not a foreign key, see below) |
 | boards | name, created_by → users |
 | board_members | board_id → boards (cascade delete), user_id → users, role (`admin` or `member`); unique (board_id, user_id) |
 | columns | board_id → boards (cascade delete), name, order (Float) |
 | cards | see model above |
 | comments | card_id → cards, user_id → users, text |
 | notifications | user_id → users, message, card_id → cards (nullable), board_id → boards (nullable), read (bool, default false) |
+| media | kind (`avatar` or `attachment`), owner_id → users (cascade), card_id → cards (cascade, null for avatars), filename, content_type (`image/avif`), width, height, byte_size, data (bytes, deferred), thumb (bytes, deferred, attachments only) |
+
+`cards` also has `description_text`, the plain-text copy of the sanitised HTML `description` (R40.5). `users.avatar_id` is deliberately not a foreign key: `media.owner_id` already references `users`, and a key in the other direction would create a users ↔ media cycle. The avatar service sets and clears it in the same transaction as the media row.
+
+**Why images live in PostgreSQL:** Vercel functions have a read-only, short-lived filesystem, so files cannot be kept on the API server. AVIF images are small (an avatar is typically 5–20 KB, an attachment 50–300 KB), so a `bytea` column in Supabase is enough for this project and avoids a second storage service. The image bytes are deferred columns, so listing attachments never loads them.
 
 Indexes: `cards(column_id, order)`, `cards(assignee_id)`, `columns(board_id, order)`, `board_members(user_id)`, `comments(card_id)`, `notifications(user_id, read)`. Schema changes go through Flask-Migrate. Before deploying a version with schema changes, `flask db upgrade` is run against Supabase over the session or direct connection (port 5432); the deployed API on Vercel uses the transaction pooler (port 6543) (R27.1, R27.2, R27.6).
 
@@ -732,6 +759,22 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 38.3 | P3 |
 | 38.4, 38.6, 38.8 | P4 |
 | 39.1–39.6 | P1–P6 |
+| 40.1, 40.2 | P4 (CardDetailModal, RichTextEditor) |
+| 40.3, 40.4, 40.5 | B12, B14 (sanitised by `richtext.clean_description`); 40.5 also B13 |
+| 40.6 | P5 (`description_text`) |
+| 41.1, 41.2 | B30 |
+| 41.3 | B30, B31 |
+| 41.4 | B2, B5, B18, B24, B27, B32 (`avatar_url` in every user shape); Avatar on P3–P6 |
+| 41.5 | P6 (ProfileHero; calls B30, B31) |
+| 41.6 | P3–P6 (Nav_Tree) |
+| 42.1, 42.3 | B33 |
+| 42.2 | B32, B5 |
+| 42.4 | B34 |
+| 42.5 | P4 (CardAttachments; calls B32–B34) |
+| 42.6 | P4 (CardItem) |
+| 43.1 | B30, B33 |
+| 43.2, 43.3 | B35 |
+| 43.4, 43.5 | P4, P6 (ProtectedImage, ImageLightbox, `lib/upload.ts`) |
 
 ## Error Handling
 
@@ -1004,7 +1047,37 @@ For any page P1–P6, any viewport width in {320, 375, 768, 1280, 1920, 2560, 38
 
 **Validates: Requirements 34.3, 38.1**
 
-Criteria not covered by a property are tested by examples, smoke checks or integration tests: page and component rendering (12.1–12.5, 12.7, 13.x, 14.2–14.5, 16.1–16.3, 16.6, 17.1, 17.3–17.6, 18.x, 19.2, 19.5, 20.x, 31.12, 31.13, 32.7, 33.1, 33.3), membership and notification examples (31.1, 31.5, 31.6, 31.9–31.11), session behaviour (32.1–32.5, covered by the Playwright auth scenarios and the reload step), structure and configuration (1.8, 4.1, 8.2, 11.1, 11.2, 11.5, 15.1, 21.1–21.3, 21.8, 30.2, 30.3), health (10.1), deliverables (22–29, including 26.6), latency (30.1), and the visual design criteria (34.1, 34.2, 34.4, 34.5, 34.7–34.9, 35.x, 36.1–36.4, 36.8–36.10, 37.x, 38.2–38.8, 39.1–39.3, 39.5, 39.6), which are covered by component tests and the Playwright visual suite.
+### Property 41: Stored descriptions contain only allowed markup
+
+For any submitted description, the stored HTML contains no tag outside the R40.3 allow-list, no event-handler, `style` or `src` attribute, and no `javascript:` or `data:` URL; sanitising the stored HTML again returns it unchanged; and an empty result is stored as null with a null plain-text copy.
+
+**Validates: Requirements 40.3, 40.4**
+
+### Property 42: Signed image URLs verify only unchanged and unexpired
+
+For any image id, variant and time `now`, the generated Signed_URL expires between one and two hours after `now` and verifies at `now`; changing any character of the signature or the image id, or reaching the expiry, makes it fail.
+
+**Validates: Requirements 43.2**
+
+### Property 43: Every stored image is an AVIF within its size limit
+
+For any accepted image format and any width and height, the stored avatar is an AVIF square with side `min(512, width, height)`, and the stored attachment is an AVIF whose longest side is at most 2048 px with the aspect ratio kept to within one pixel.
+
+**Validates: Requirements 41.1, 42.1**
+
+### Property 44: Only the uploader or a board admin removes an attachment
+
+For any uploader (admin or member) and any remover (admin, the uploader, another member or an outsider), DELETE /api/attachments/<id> succeeds exactly when the remover is the uploader or a Board admin, and returns 403 otherwise.
+
+**Validates: Requirements 42.4**
+
+### Property 45: Editor links use only http, https or mailto
+
+For any string typed into the link field, `normaliseLink` returns null or a URL starting with `http://`, `https://` or `mailto:`.
+
+**Validates: Requirements 40.3**
+
+Criteria not covered by a property are tested by examples, smoke checks or integration tests: page and component rendering (12.1–12.5, 12.7, 13.x, 14.2–14.5, 16.1–16.3, 16.6, 17.1, 17.3–17.6, 18.x, 19.2, 19.5, 20.x, 31.12, 31.13, 32.7, 33.1, 33.3), membership and notification examples (31.1, 31.5, 31.6, 31.9–31.11), session behaviour (32.1–32.5, covered by the Playwright auth scenarios and the reload step), structure and configuration (1.8, 4.1, 8.2, 11.1, 11.2, 11.5, 15.1, 21.1–21.3, 21.8, 30.2, 30.3), health (10.1), deliverables (22–29, including 26.6), latency (30.1), and the visual design criteria (34.1, 34.2, 34.4, 34.5, 34.7–34.9, 35.x, 36.1–36.4, 36.8–36.10, 37.x, 38.2–38.8, 39.1–39.3, 39.5, 39.6), which are covered by component tests and the Playwright visual suite, and the media and editor criteria (40.1, 40.2, 40.5, 40.6, 41.2–41.6, 42.2, 42.3, 42.5, 42.6, 43.1, 43.3–43.5), covered by `backend/tests/test_media.py`, `frontend/__tests__/media-and-editor.test.tsx` and `frontend/e2e/media.spec.ts`.
 
 ## Testing Strategy
 

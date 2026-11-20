@@ -169,7 +169,18 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 
 ---
 
-## v4 — Template for the next round
+## v4 — Project owner's feature round
+
+### 21. Rich-text descriptions, profile photos and card images (project owner's request)
+
+- **Before (R16, R18, R36.7, Nav_Tree):** descriptions were a plain `<textarea>`; Avatars were initials only; the main navigation had a "Profile" link as well as the Profile_Capsule, so the profile appeared twice.
+- **After:** new Requirements 40–43, routes B30–B35 (B32–B35 in a ninth `media` Blueprint), Properties 41–45 and task group 23. Descriptions use a TipTap toolbar editor and are sanitised server-side with nh3. Avatars and card images are converted to AVIF in memory with Pillow (the original is never stored) and kept in Supabase PostgreSQL. Images are served through short-lived HMAC-signed URLs and shown through a ProtectedImage component (no context menu, drag-out or long-press save) and a lightbox. The duplicate Profile link was removed.
+- **Why:** the project owner asked for a profile photo stored as AVIF with the original deleted, a clickable but download-protected picture, image attachments on cards and a full formatting toolbar. Vercel's filesystem is read-only, so images go in the database. `<img>` tags cannot send the JWT and the API is on another domain, so Signed_URLs carry their own credential. User HTML is only safe to render after server-side sanitising, so the API (not the editor) is the trust boundary. Library APIs were checked in Context7 (Pillow 13 AVIF options, TipTap 3 StarterKit with Underline and Link). Blocking right-click is only a deterrent, and the requirement says so rather than promising DRM.
+- **Refinement prompt:** "The profile tab is doubled; keep the one at the bottom. Let users change their profile picture, convert it to AVIF and delete the original. The picture can be clicked but is protected from download (no right-click). Allow image attachments on cards, and give the description a full rich-text toolbar (bold, italic, underline, etc.)."
+
+---
+
+## v5 — Template for the next round
 
 Copy this block for each new finding.
 

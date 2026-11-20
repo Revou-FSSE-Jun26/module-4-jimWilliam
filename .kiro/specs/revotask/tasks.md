@@ -648,6 +648,56 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
 - [x] 22. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
+- [x] 23. Rich text, profile photos and card images (refinement round v4)
+  - [x] 23.1 Add the media model and migration
+    - `media` table, `users.avatar_id`, `cards.description_text`; the migration converts existing plain-text descriptions to sanitised paragraphs
+    - _Requirements: 40.5, 41.1, 42.1_
+
+  - [x] 23.2 Sanitise descriptions on create and update
+    - `app/common/richtext.py` with nh3; search uses `description_text`
+    - _Requirements: 40.3, 40.4, 40.5_
+
+  - [x] 23.3 Write property test for sanitising
+    - **Property 41: Stored descriptions contain only allowed markup**
+    - **Validates: Requirements 40.3, 40.4**
+
+  - [x] 23.4 Implement the AVIF pipeline and Signed_URLs
+    - `app/common/images.py` (Pillow AVIF, metadata stripped, 40 MP and 4 MB limits) and `app/common/media_urls.py`
+    - _Requirements: 41.2, 43.1, 43.2, 43.3_
+
+  - [x] 23.5 Write property tests for Signed_URLs and stored images
+    - **Property 42: Signed image URLs verify only unchanged and unexpired**
+    - **Property 43: Every stored image is an AVIF within its size limit**
+    - **Validates: Requirements 41.1, 42.1, 43.2**
+
+  - [x] 23.6 Implement B30 and B31 (avatar upload and removal) and `avatar_url` in every user shape
+    - _Requirements: 41.1, 41.3, 41.4_
+
+  - [x] 23.7 Implement the media Blueprint: B32–B35
+    - _Requirements: 42.1, 42.2, 42.3, 42.4, 43.2, 43.3_
+
+  - [x] 23.8 Write property test for attachment removal
+    - **Property 44: Only the uploader or a board admin removes an attachment**
+    - **Validates: Requirements 42.4**
+
+  - [x] 23.9 Build ProtectedImage, ImageLightbox and the photo Avatar
+    - _Requirements: 41.4, 43.4_
+
+  - [x] 23.10 Add photo upload to the profile page and remove the duplicate Profile nav link
+    - _Requirements: 41.5, 41.6, 43.5_
+
+  - [x] 23.11 Build the RichTextEditor and CardAttachments, and wire them into CardDetailModal
+    - TipTap 3 toolbar (APG toolbar pattern), link field limited to http, https and mailto; attachment grid with drop upload and confirmed removal; attachment count on CardItem
+    - _Requirements: 40.1, 40.2, 40.6, 42.5, 42.6_
+
+  - [x] 23.12 Write property test for editor links
+    - **Property 45: Editor links use only http, https or mailto**
+    - **Validates: Requirements 40.3**
+
+  - [x] 23.13 Write component and end-to-end tests
+    - `__tests__/media-and-editor.test.tsx` and `e2e/media.spec.ts` (AVIF upload, protected lightbox, formatted description after reload)
+    - _Requirements: 40.1, 41.5, 42.5, 43.4_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
@@ -657,6 +707,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
 - Task numbers 6.8–6.11, 16.17 and 16.18 were added in refinement round v2, and 15.12–15.18, 16.19–16.25, 18.5 and 20.5 in round v2.1 (see `CHANGELOG.md`). They keep their numbers so earlier references stay valid.
 - The UI tasks (15.12–15.18, 16.19–16.25) follow the "UI/UX Design System" section of `design.md`; build the tokens (15.12) before any styled component.
 - The comments status tests (9.7) and the component tests (18.1, 18.2) are not optional because Requirements 24.2 and 25.2 demand them.
+- Group 23 was added in refinement round v4 (CHANGELOG entry 21) for routes B30–B35 and Requirements 40–43.
 - Tasks 19.5 and 20.4 need the live deployment, which the user performs on Vercel (frontend and API) with Supabase.
 
 ## Task Dependency Graph
@@ -681,7 +732,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 14, "tasks": ["18.4"]},
     {"id": 15, "tasks": ["19.4"]},
     {"id": 16, "tasks": ["20.4", "19.5"]},
-    {"id": 17, "tasks": ["21.3"]}
+    {"id": 17, "tasks": ["21.3"]},
+    {"id": 18, "tasks": ["23.1", "23.2", "23.4"]},
+    {"id": 19, "tasks": ["23.3", "23.5", "23.6", "23.7", "23.9"]},
+    {"id": 20, "tasks": ["23.8", "23.10", "23.11"]},
+    {"id": 21, "tasks": ["23.12", "23.13"]}
   ]
 }
 ```
