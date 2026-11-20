@@ -70,3 +70,14 @@ def test_supabase_transaction_pooler_disables_prepared_statements_and_pooling():
     assert pooled == {"poolclass": NullPool, "connect_args": {"prepare_threshold": None}}
     direct = engine_options(_database_url("postgres://postgres.ref:pw@aws-0-x.pooler.supabase.com:5432/postgres"))
     assert direct == {"pool_pre_ping": True}
+
+
+def test_untouched_env_example_values_fail_fast():
+    from app import create_app
+    from app.config import TestConfig
+
+    class PlaceholderConfig(TestConfig):
+        SQLALCHEMY_DATABASE_URI = "postgresql+psycopg://USER:PASSWORD@HOST:5432/DATABASE"
+
+    with pytest.raises(RuntimeError, match="example values"):
+        create_app(PlaceholderConfig)

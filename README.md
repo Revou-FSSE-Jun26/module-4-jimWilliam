@@ -247,7 +247,7 @@ cd backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env          # set DATABASE_URL, JWT_SECRET_KEY and FRONTEND_ORIGIN
+cp -n .env.example .env       # first time only (-n never overwrites); then set DATABASE_URL, JWT_SECRET_KEY, FRONTEND_ORIGIN
 flask --app wsgi db upgrade   # apply every migration
 python scripts/seed_demo.py   # create the demo account and "Demo board"
 flask --app wsgi run --port 5000

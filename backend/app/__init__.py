@@ -22,6 +22,12 @@ def create_app(config_object=Config) -> Flask:
     app.config.from_object(config_object)
     if not app.config.get("JWT_SECRET_KEY"):
         raise RuntimeError("JWT_SECRET_KEY is not set. Copy .env.example to .env and fill it in.")
+    # Fail fast on untouched .env.example values: a placeholder host makes every database call hang.
+    if "@HOST:" in app.config["SQLALCHEMY_DATABASE_URI"] or app.config["JWT_SECRET_KEY"] == "change-me-to-a-long-random-string":
+        raise RuntimeError(
+            "backend/.env still has the example values from .env.example. Set DATABASE_URL to your database "
+            "(e.g. postgresql://postgres@127.0.0.1:5432/revotask_dev) and JWT_SECRET_KEY to a long random string."
+        )
     app.url_map.strict_slashes = False
 
     db.init_app(app)
