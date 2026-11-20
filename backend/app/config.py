@@ -38,6 +38,8 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=float(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_HOURS", "24")))
     FRONTEND_ORIGINS = [o.strip() for o in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",") if o.strip()]
     JSON_SORT_KEYS = False
+    # Image uploads: Vercel functions accept request bodies up to 4.5 MB, so stay under that.
+    MAX_CONTENT_LENGTH = 4 * 1024 * 1024
     # None = werkzeug's default (scrypt). Tests use a cheap method so property tests can register many users.
     PASSWORD_HASH_METHOD = None
 

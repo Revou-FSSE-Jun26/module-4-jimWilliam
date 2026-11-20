@@ -62,13 +62,19 @@ export function CardItem({ card, columns, dragging, focusMove, style, onOpen, on
         <div className="card-meta relative mt-2 items-center gap-3 text-sm text-muted">
           {card.assignee ? (
             <span className="inline-flex min-w-0 items-center gap-1.5">
-              <Avatar id={card.assignee.id} name={card.assignee.name} size="sm" />
+              <Avatar id={card.assignee.id} name={card.assignee.name} src={card.assignee.avatar_url} size="sm" />
               <span className="truncate">{card.assignee.name}</span>
             </span>
           ) : (
             <span>Unassigned</span>
           )}
-          <span className="ms-auto inline-flex items-center gap-1" aria-label={`${card.comment_count ?? 0} ${(card.comment_count ?? 0) === 1 ? "comment" : "comments"}`}>
+          {(card.attachment_count ?? 0) > 0 && (
+            <span className="ms-auto inline-flex items-center gap-1" aria-label={`${card.attachment_count} ${card.attachment_count === 1 ? "image" : "images"}`}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="3" /><path d="M3.5 16l5-5 4 4 3-3 5 5" /><circle cx="15.5" cy="9.5" r="1.5" /></svg>
+              {card.attachment_count}
+            </span>
+          )}
+          <span className={`${(card.attachment_count ?? 0) > 0 ? "" : "ms-auto "}inline-flex items-center gap-1`} aria-label={`${card.comment_count ?? 0} ${(card.comment_count ?? 0) === 1 ? "comment" : "comments"}`}>
             <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 5h16v11H8l-4 4z" /></svg>
             {card.comment_count ?? 0}
           </span>

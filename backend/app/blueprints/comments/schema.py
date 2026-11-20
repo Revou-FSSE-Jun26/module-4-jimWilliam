@@ -1,3 +1,4 @@
+from app.common.media_urls import user_brief
 from marshmallow import EXCLUDE, Schema, fields, pre_load, validate
 
 
@@ -24,4 +25,4 @@ class CommentSchema(Schema):
     updated_at = fields.DateTime()
 
     def get_author(self, comment):
-        return {"id": str(comment.author.id), "name": comment.author.name}
+        return user_brief(comment.author)

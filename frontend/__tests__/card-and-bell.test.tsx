@@ -33,6 +33,7 @@ describe("CardDetailModal (R16.1–R16.5)", () => {
         comment("c1", ANA.id, "Ana Novak", "Mine"),
         comment("c2", "55555555-5555-4555-8555-555555555555", "Omar", "Someone else's"),
       ],
+      [`GET /api/cards/${CARD.id}/attachments`]: [],
       [`POST /api/cards/${CARD.id}/comments`]: (body: unknown) => comment("c3", ANA.id, "Ana Novak", (body as { text: string }).text),
     });
   });

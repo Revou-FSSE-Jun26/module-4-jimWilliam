@@ -1,6 +1,7 @@
 from marshmallow import EXCLUDE, Schema, fields, pre_load, validate
 
 from app.blueprints.columns.schema import ColumnWithCardsSchema
+from app.common.media_urls import avatar_url
 
 
 class BoardNameSchema(Schema):
@@ -49,5 +50,9 @@ class MemberSchema(Schema):
     user_id = fields.UUID()
     name = fields.String(attribute="user.name")
     email = fields.String(attribute="user.email")
+    avatar_url = fields.Method("get_avatar_url")
     role = fields.String()
     created_at = fields.DateTime()
+
+    def get_avatar_url(self, membership):
+        return avatar_url(membership.user)

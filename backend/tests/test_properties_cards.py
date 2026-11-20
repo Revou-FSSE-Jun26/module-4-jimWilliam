@@ -7,6 +7,7 @@ import uuid
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
+from app.common.richtext import clean_description
 from app.extensions import db
 from app.models import Card, Notification
 from tests.strategies import PRINTABLE, positive_floats
@@ -72,7 +73,8 @@ def test_property_14_card_update_refreshes_updated_at(client, owner, title, desc
     res = client.patch(url, json={"title": title, "description": description}, headers=owner["headers"])
     assert res.status_code == 200
     data = res.get_json()["data"]
-    assert data["title"] == title.strip() and data["description"] == description
+    # Descriptions are stored as sanitised HTML (R40); plain text becomes escaped paragraphs.
+    assert data["title"] == title.strip() and data["description"] == clean_description(description)[0]
     assert data["updated_at"] >= old["updated_at"] and data["created_at"] == old["created_at"]
 
 

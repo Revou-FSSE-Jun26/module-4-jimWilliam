@@ -121,8 +121,8 @@ Sign in with the shared demo account to explore a board that already has columns
   </tr>
   <tr>
     <td valign="top">
-      <h4>💬 Comments</h4>
-      Add, edit and delete your own comments in the card detail view. Edit and delete appear only on comments you wrote.
+      <h4>💬 Rich descriptions and comments</h4>
+      Format card descriptions with a full toolbar (bold, italic, underline, headings, lists, quotes, code, links), sanitised on the server. Add, edit and delete your own comments.
     </td>
     <td valign="top">
       <h4>🔎 My tasks and search</h4>
@@ -137,6 +137,16 @@ Sign in with the shared demo account to explore a board that already has columns
     <td valign="top">
       <h4>📊 Analytics for admins</h4>
       Cards per column, cards completed this week, and each member's comments and assigned cards, computed with SQLAlchemy joins.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>🖼️ Profile photos and card images</h4>
+      Upload a profile photo or attach up to 10 images to a card. Every image is converted to AVIF (the original is never kept), served through short-lived signed links, and shown in a lightbox that blocks right-click and drag-to-save.
+    </td>
+    <td valign="top">
+      <h4>🛡️ Safe uploads</h4>
+      Only real images up to 4 MB and 40 megapixels are accepted. Re-encoding strips EXIF data such as GPS positions, and only the uploader or a board admin can remove an attachment.
     </td>
   </tr>
   <tr>
@@ -199,7 +209,8 @@ flowchart LR
     DEV([Your machine]) -.->|flask db upgrade :5432| DB
 ```
 
-- **Eight Flask Blueprints** (`auth`, `boards`, `columns`, `cards`, `comments`, `notifications`, `analytics`, `users`), each with `routes.py`, `service.py` and `schema.py`.
+- **Eight Flask Blueprints** from the brief (`auth`, `boards`, `columns`, `cards`, `comments`, `notifications`, `analytics`, `users`) plus `media` for card images and signed image links, each with `routes.py`, `service.py` and `schema.py`.
+- **Images in PostgreSQL:** Vercel functions cannot keep files on disk, so uploads are stored as small AVIF files in Supabase and served from `/api/media/<id>` with an HMAC-signed, one-to-two-hour URL.
 - Every response uses the same envelope: `{ "data": ... }` on success and `{ "error": "..." }` on failure.
 - `proxy.ts` (the Next.js 16 name for middleware) redirects signed-out visitors before a protected page renders.
 
@@ -207,8 +218,8 @@ flowchart LR
 
 | Layer | Tools |
 |---|---|
-| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, react-hot-toast |
-| **Backend** | Python 3.13, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Cors, Marshmallow, psycopg 3, python-dotenv; Gunicorn for production-style local runs |
+| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, TipTap 3 (rich-text editor), react-hot-toast |
+| **Backend** | Python 3.13, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Cors, Marshmallow, psycopg 3, Pillow (AVIF), nh3 (HTML sanitiser), python-dotenv; Gunicorn for production-style local runs |
 | **Database** | PostgreSQL on Supabase (local PostgreSQL or SQLite for development) |
 | **Testing** | pytest + Hypothesis, Jest + React Testing Library + fast-check, Playwright + axe-core |
 | **Deployment** | Vercel (Next.js app, and the Flask API as a Python function), Supabase |
@@ -218,16 +229,16 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>20 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
+    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>21 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
 ```
 
 1. **Brief.** `specs/brief.md` sets the overview, the two user roles, the core features, the tech stack and the non-functional requirements.
 2. **Specs with Kiro.** Kiro turned the brief into `requirements.md` (EARS acceptance criteria), `design.md` and `tasks.md`. The first version is kept in `specs-history/v1/`.
-3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 20 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
+3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 21 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
 4. **Steering guidelines first.** `guidelines/` holds 33 rules (backend, database, frontend), each with a Rule, a Rationale and a RevoTask Example. They were committed before any code, and `scripts/check-guidelines-first.ps1` verifies that order in the git history.
 5. **Generate, then review.** Code was generated task by task with the guidelines in context, and library APIs were checked against current documentation (Context7 and the Next.js docs bundled with the package). `guidelines/ai-comparison.md` compares the same prompt with and without guidelines: 8 violations dropped to 0.
 6. **Violations documented.** `guidelines/violation-report.md` lists 6 violations found in generated code, each with the guideline it breaks and the fix.
-7. **Tests.** Every one of the 40 correctness properties in `design.md` has a test. The tests also caught real bugs: a drag that could not start from a button, an accessibility name mismatch, colours that failed their own contrast targets, and an empty error message.
+7. **Tests.** Every one of the 45 correctness properties in `design.md` has a test. The tests also caught real bugs: a drag that could not start from a button, an accessibility name mismatch, colours that failed their own contrast targets, and an empty error message.
 
 ## Run it locally
 
@@ -275,9 +286,9 @@ Then sign in with the [demo account](#live-demo-and-demo-account).
 
 | Suite | Command | What it covers | Result |
 |---|---|---|---|
-| **Backend** | `cd backend && pytest -v` | Every route and error status, plus 25 Hypothesis properties at 100 examples each | ✅ 112 passed |
-| **Frontend** | `cd frontend && npm test` | Components, pages and hooks, plus 13 fast-check properties | ✅ 97 passed |
-| **End to end** | `cd frontend && npx playwright test` | 4 auth scenarios, the 8-step Kanban journey, layouts at 7 widths, axe scans | ✅ 12 passed |
+| **Backend** | `cd backend && pytest -v` | Every route and error status, plus 29 Hypothesis properties | ✅ 131 passed |
+| **Frontend** | `cd frontend && npm test` | Components, pages and hooks, plus 14 fast-check properties | ✅ 109 passed |
+| **End to end** | `cd frontend && npx playwright test` | 4 auth scenarios, the 8-step Kanban journey, photo and image uploads, layouts at 7 widths, axe scans | ✅ 14 passed |
 
 <details>
 <summary><b>More test commands</b></summary>
@@ -387,7 +398,7 @@ revotask/
 | [`specs/requirements.md`](specs/requirements.md) | 39 requirements with EARS acceptance criteria |
 | [`specs/design.md`](specs/design.md) | Architecture, routes, UI/UX design system, 40 correctness properties, traceability |
 | [`specs/tasks.md`](specs/tasks.md) | The implementation plan, with progress |
-| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 20 refinement rounds, each with a before and an after |
+| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 21 refinements, each with a before and an after |
 | [`guidelines/`](guidelines/) | Steering guidelines, the AI output comparison and the violation report |
 | [`docs/postman/`](docs/postman/) | Postman collection and environment for the deployed API |
 

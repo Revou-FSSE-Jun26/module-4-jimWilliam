@@ -1,5 +1,7 @@
 from marshmallow import EXCLUDE, Schema, fields, pre_load, validate
 
+from app.common.media_urls import avatar_url
+
 
 class _Base(Schema):
     class Meta:
@@ -28,4 +30,8 @@ class UserSchema(Schema):
     id = fields.UUID()
     name = fields.String()
     email = fields.String()
+    avatar_url = fields.Method("get_avatar_url")
     created_at = fields.DateTime()
+
+    def get_avatar_url(self, user):
+        return avatar_url(user)

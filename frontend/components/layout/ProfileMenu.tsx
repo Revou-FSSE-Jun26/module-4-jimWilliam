@@ -61,7 +61,7 @@ export function ProfileMenu({ compact = false, idPrefix }: { compact?: boolean; 
         className="glass-pebble lift specular flex w-full items-center gap-3 rounded-pebble p-2 text-start aria-expanded:ring-1 aria-expanded:ring-seaglass"
         {...invoker(menuId)}
       >
-        <Avatar id={user.id} name={user.name} />
+        <Avatar id={user.id} name={user.name} src={user.avatar_url} />
         {/* A hidden prefix (not aria-label) keeps the visible name inside the accessible name (WCAG 2.5.3). */}
         <span className="visually-hidden">Account menu: </span>
         <span className={`min-w-0 flex-1 ${compact ? "rail-hide" : ""}`}>

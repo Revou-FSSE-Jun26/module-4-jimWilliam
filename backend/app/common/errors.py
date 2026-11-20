@@ -45,6 +45,8 @@ def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(HTTPException)
     def handle_http_exception(err: HTTPException):
         # Unknown URLs, bad UUIDs in the path (404) and wrong methods (405) keep the envelope.
+        if err.code == 413:
+            return fail("The file is too large. Images can be up to 4 MB.", 413)
         return fail(err.description if err.code != 404 else "Not found", err.code or 500)
 
     @app.errorhandler(Exception)

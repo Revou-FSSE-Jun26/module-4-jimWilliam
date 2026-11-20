@@ -30,7 +30,8 @@ export function mockApi(routes: Record<string, unknown | ((body: unknown) => unk
   global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input).replace(/^https?:\/\/[^/]+/, "");
     const method = (init?.method ?? "GET").toUpperCase();
-    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    const raw = init?.body;
+    const body = raw instanceof FormData ? raw : raw ? JSON.parse(String(raw)) : undefined;
     calls.push({ method, url, body });
     const key = Object.keys(routes).find((k) => k === `${method} ${url}` || k === `${method} ${url.split("?")[0]}`);
     if (!key) return jsonResponse(404, { error: "Not mocked" });

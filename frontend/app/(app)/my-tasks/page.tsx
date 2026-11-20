@@ -99,7 +99,7 @@ export default function MyTasksPage() {
                         className="glass-pebble lift specular block h-full rounded-pebble p-4 text-foam no-underline"
                       >
                         <span className="block font-medium [overflow-wrap:anywhere]">{card.title}</span>
-                        {card.description && <span className="mt-1 line-clamp-2 block text-sm text-muted">{card.description}</span>}
+                        {card.description_text && <span className="mt-1 line-clamp-2 block text-sm text-muted">{card.description_text}</span>}
                         <span className="mt-2 block text-sm text-muted">{card.assignee ? `Assigned to ${card.assignee.name}` : "Unassigned"}</span>
                       </Link>
                     </li>

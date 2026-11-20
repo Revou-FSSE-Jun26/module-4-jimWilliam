@@ -4,7 +4,8 @@ type Json = Record<string, unknown> | unknown[];
 
 export interface ApiOptions extends Omit<RequestInit, "body"> {
   token?: string | null;
-  body?: Json;
+  /** JSON, or FormData for file uploads (the browser sets the multipart boundary). */
+  body?: Json | FormData;
 }
 
 /** Server Components use API_BASE_URL; the browser uses NEXT_PUBLIC_API_BASE_URL (R21.2, R21.3). */
@@ -13,11 +14,18 @@ function baseUrl(): string {
   return (url ?? "").replace(/\/$/, "");
 }
 
+/** Image URLs from the API are signed paths (/api/media/...); prefix them with the API host. */
+export function mediaUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return /^https?:\/\//.test(path) ? path : `${baseUrl()}${path}`;
+}
+
 /** Typed fetch wrapper: adds the Bearer token, unwraps the envelope, throws ApiError on non-2xx (FE-02). */
 export async function apiClient<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { token, body, headers: extraHeaders, ...init } = options;
   const headers = new Headers(extraHeaders);
-  if (body !== undefined) headers.set("Content-Type", "application/json");
+  const isForm = typeof FormData !== "undefined" && body instanceof FormData;
+  if (body !== undefined && !isForm) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   let res: Response;
@@ -25,7 +33,7 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
     res = await fetch(`${baseUrl()}${path}`, {
       ...init,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       cache: "no-store",
     });
   } catch {

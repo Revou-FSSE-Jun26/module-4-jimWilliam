@@ -5,7 +5,7 @@ from app.blueprints.boards.schema import BoardNameSchema, MemberAddSchema
 from app.common.access import get_board_or_404, require_member, notify
 from app.common.errors import AppError
 from app.extensions import db
-from app.models import Board, BoardMember, Card, Column, Comment, User
+from app.models import Board, BoardMember, Card, Column, Comment, Media, User
 
 
 def create_board(user_id, payload) -> Board:
@@ -52,9 +52,14 @@ def get_board_detail(board_id, user_id) -> Board:
         select(Comment.card_id, func.count(Comment.id))
         .where(Comment.card_id.in_([c.id for c in cards])).group_by(Comment.card_id)
     ).all()) if cards else {}
+    attachments = dict(db.session.execute(
+        select(Media.card_id, func.count(Media.id))
+        .where(Media.card_id.in_([c.id for c in cards])).group_by(Media.card_id)
+    ).all()) if cards else {}
     by_column = {cid: [] for cid in column_ids}
     for card in cards:
         card.comment_count = counts.get(card.id, 0)
+        card.attachment_count = attachments.get(card.id, 0)
         by_column[card.column_id].append(card)
     for column in board.columns:
         column.live_cards = by_column[column.id]

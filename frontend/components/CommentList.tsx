@@ -99,7 +99,7 @@ export function CommentList({ cardId, active, onCountChange }: { cardId: string;
             const mine = c.user_id === user?.id;
             return (
               <li key={c.id} className="group/reveal glass-pebble enter flex gap-3 rounded-pebble p-3" data-testid="comment">
-                <Avatar id={c.author.id} name={c.author.name} size="sm" />
+                <Avatar id={c.author.id} name={c.author.name} src={c.author.avatar_url} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm"><span className="font-semibold">{c.author.name}</span> <span className="text-muted">{when(c.created_at)}</span></p>
                   {editingId === c.id ? (

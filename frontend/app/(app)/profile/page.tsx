@@ -10,8 +10,9 @@ import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { apiClient } from "@/lib/apiClient";
 import { notify } from "@/lib/toast";
 import type { Board, Card, User } from "@/lib/types";
+import { uploadImage } from "@/lib/upload";
 
-/** /profile (R18, R36.8–R36.10): pre-filled from AuthContext, refreshed from GET /api/users/me. */
+/** /profile (R18, R36.8–R36.10, R41): pre-filled from AuthContext, refreshed from GET /api/users/me. */
 export default function ProfilePage() {
   const { token, user, setUser } = useAuth();
   const handleError = useErrorHandler();
@@ -29,6 +30,7 @@ export default function ProfilePage() {
     ])
       .then(([me, boards, cards]) => {
         if (cancelled) return;
+        setUser(me);   // picks up a fresh signed avatar URL
         setSaved({ name: me.name, email: me.email });
         setName(me.name);
         setEmail(me.email);
@@ -38,7 +40,7 @@ export default function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [token, handleError]);
+  }, [token, handleError, setUser]);
 
   async function save() {
     try {
@@ -53,13 +55,40 @@ export default function ProfilePage() {
     }
   }
 
+  async function uploadAvatar(file: File) {
+    try {
+      setUser(await uploadImage<User>("/api/users/me/avatar", file, token));
+      notify.success("Profile photo updated");
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function removeAvatar() {
+    try {
+      setUser(await apiClient<User>("/api/users/me/avatar", { method: "DELETE", token }));
+      notify.success("Profile photo removed");
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   if (!user) return null;
 
   return (
     <>
       <PageHeader title="Profile" subtitle="How your teammates see you" />
       <div className="mx-auto mt-4 max-w-5xl">
-        <ProfileHero id={user.id} name={name} email={email} stats={stats} />
+        <ProfileHero
+          id={user.id}
+          name={name}
+          email={email}
+          stats={stats}
+          avatarUrl={user.avatar_url}
+          onUpload={uploadAvatar}
+          onRemove={removeAvatar}
+          onInvalidFile={(message) => notify.error(message)}
+        />
         <ProfileForm
           saved={saved}
           name={name}

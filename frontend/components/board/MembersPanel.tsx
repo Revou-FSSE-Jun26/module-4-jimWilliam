@@ -64,7 +64,7 @@ export function MembersPanel({ boardId, open, onClose }: { boardId: string; open
       <ul className="grid gap-2" aria-busy={members === null}>
         {(members ?? []).map((m) => (
           <li key={m.user_id} className="glass-pebble enter flex items-center gap-3 rounded-pebble p-2.5">
-            <Avatar id={m.user_id} name={m.name} />
+            <Avatar id={m.user_id} name={m.name} src={m.avatar_url} />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium">{m.name}{m.user_id === user?.id ? " (you)" : ""}</span>
               <span className="block truncate text-sm text-muted">{m.email}</span>

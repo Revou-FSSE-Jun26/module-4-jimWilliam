@@ -171,7 +171,7 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
         </form>
       </div>
 
-      <CardDetailModal card={openCard} boardId={board.id} onClose={closeCard} onUpdated={updateCard} onDeleted={deleteCard} />
+      <CardDetailModal card={openCard} boardId={board.id} role={board.role} onClose={closeCard} onUpdated={updateCard} onDeleted={deleteCard} />
 
       <ColumnSettings
         key={editingColumn?.id ?? "none"}

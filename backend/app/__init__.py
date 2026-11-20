@@ -42,13 +42,15 @@ def create_app(config_object=Config) -> Flask:
     from app.blueprints.boards import bp as boards_bp
     from app.blueprints.cards import bp as cards_bp
     from app.blueprints.columns import bp as columns_bp
+    from app.blueprints.media import bp as media_bp
     from app.blueprints.comments import bp as comments_bp
     from app.blueprints.notifications import bp as notifications_bp
     from app.blueprints.users import bp as users_bp
     from app.common.envelope import ok
     from app.common.errors import register_error_handlers
 
-    for blueprint in (auth_bp, boards_bp, columns_bp, cards_bp, comments_bp, notifications_bp, analytics_bp, users_bp):
+    for blueprint in (auth_bp, boards_bp, columns_bp, cards_bp, comments_bp, notifications_bp, analytics_bp, users_bp,
+                      media_bp):
         app.register_blueprint(blueprint)
     register_error_handlers(app)
 

@@ -45,7 +45,6 @@ const ICONS = {
   dashboard: "M4 13h6V4H4zm10 7h6v-9h-6zM4 20h6v-4H4zm10-9h6V4h-6z",
   boards: "M4 5h4v14H4zm6 0h4v9h-4zm6 0h4v6h-4z",
   tasks: "M9 11l2 2 4-4M5 4h14v16H5z",
-  profile: "M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0",
   chevron: "M9 6l6 6-6 6",
 };
 
@@ -195,7 +194,6 @@ export function NavTree({ boards, shell, onNavigate }: { boards: Board[]; shell:
       ),
     },
     { key: "tasks", node: <NavLink href="/my-tasks" label="My tasks" icon={ICONS.tasks} current={pathname === "/my-tasks"} shell={shell} onNavigate={navigate} /> },
-    { key: "profile", node: <NavLink href="/profile" label="Profile" icon={ICONS.profile} current={pathname === "/profile"} shell={shell} onNavigate={navigate} /> },
   ];
 
   return (

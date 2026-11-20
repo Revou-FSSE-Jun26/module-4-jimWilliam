@@ -1,3 +1,4 @@
+from app.common.media_urls import user_brief
 from marshmallow import EXCLUDE, Schema, ValidationError, fields, missing, pre_load, validate, validates_schema
 
 
@@ -6,7 +7,7 @@ class CardCreateSchema(Schema):
         unknown = EXCLUDE
 
     title = fields.String(required=True, validate=validate.Length(min=1, max=200))
-    description = fields.String(allow_none=True, validate=validate.Length(max=5000))
+    description = fields.String(allow_none=True, validate=validate.Length(max=20000))   # HTML; text limit in the service
     assignee_id = fields.UUID(allow_none=True)
 
     @pre_load
@@ -56,21 +57,25 @@ class CardSchema(Schema):
     column_id = fields.UUID()
     title = fields.String()
     description = fields.String(allow_none=True)
+    description_text = fields.String(allow_none=True)
     assignee_id = fields.UUID(allow_none=True)
     assignee = fields.Method("get_assignee")
     order = fields.Float()
     comment_count = fields.Method("get_comment_count")
+    attachment_count = fields.Method("get_attachment_count")
     board_id = fields.Method("get_board_id")
     board_name = fields.Method("get_board_name")
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
 
     def get_assignee(self, card):
-        user = card.assignee
-        return {"id": str(user.id), "name": user.name} if user else None
+        return user_brief(card.assignee)
 
     def get_comment_count(self, card):
         return getattr(card, "comment_count", missing)
+
+    def get_attachment_count(self, card):
+        return getattr(card, "attachment_count", missing)
 
     def get_board_id(self, card):
         meta = getattr(card, "board_meta", None)
