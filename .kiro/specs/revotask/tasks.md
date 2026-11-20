@@ -545,6 +545,12 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Table test over every text, icon, border and focus-ring token on each surface, translucent and opaque, in both themes
     - **Validates: Requirements 34.6, 39.4**
 
+  - [x] 16.26 Add Column and Card management controls to P4
+    - Column header menu with inline rename (B10) and delete with confirmation (B11), as described in the P4 page design
+    - CardDetailModal editable title, description and assignee select limited to Board_Members (B14), and Card delete with confirmation (B15)
+    - Apply the entry and exit pattern when a Card or Column is added or removed
+    - _Requirements: 14.2, 14.4, 31.9, 37.2_
+
 - [x] 17. Checkpoint - Frontend
   - Ensure all tests pass, ask the user if questions arise.
 
@@ -562,6 +568,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - Profile_Menu: the keyboard model, radio and checkbox `aria-checked` updates, Log out calls `logout()`
     - _Requirements: 35.5, 35.6, 35.8, 35.9, 36.2, 36.3, 36.4_
 
+  - [x] 18.6 Write component tests for ProfileForm and ProfileHero
+    - ProfileForm: Save is disabled while the form matches the saved values, enabled with the unsaved-changes indicator after an edit, and Reset restores the saved values
+    - ProfileHero: name and avatar initials update on every keystroke of the name field
+    - _Requirements: 36.9, 36.10, 25.1_
+
   - [x]* 18.3 Write example tests for the pages
     - Test forms, redirects and toasts for P1, P2, P3, P5 and P6
     - _Requirements: 12.3, 12.4, 12.5, 13.2, 17.3, 17.4, 18.2, 18.3_
@@ -571,12 +582,14 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - _Requirements: 25.1, 28.2, 28.3_
 
 - [ ] 19. Deployment configuration
-  - [x] 19.1 Add the Railway configuration for the Backend
-    - Create `Procfile` or `railway.json` that runs `flask db upgrade` and then `gunicorn wsgi:app`
-    - _Requirements: 27.1, 27.2_
+  - [x] 19.1 Add the Vercel and Supabase configuration for the Backend
+    - `backend/vercel.json` for the Flask app in `wsgi.py`, excluding tests, migrations and scripts from the function bundle
+    - `engine_options()` in `app/config.py`: `NullPool` and `prepare_threshold=None` for Supabase's transaction pooler (port 6543)
+    - Document running `flask db upgrade` against Supabase over port 5432 before deploying (CHANGELOG entry 20)
+    - _Requirements: 27.1, 27.2, 27.6_
 
   - [x] 19.2 Create the Postman collection
-    - Add requests for B26, B1 and B2 with an environment for the Railway URL
+    - Add requests for B26, B1 and B2 with an environment for the deployed API URL
     - _Requirements: 27.3_
 
   - [x] 19.3 Add the Vercel configuration for the Frontend
@@ -586,7 +599,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
   - [x] 19.4 Commit the deployment files
     - _Requirements: 28.3_
 
-  - [ ] 19.5 Measure API latency on the live Railway URL
+  - [ ] 19.5 Measure API latency on the live API URL
     - Add `scripts/latency_check.py` that sends 100 requests each to B26, B4 and B5 with a test JWT and prints the 95th percentile
     - Record the result in the README; investigate any endpoint over 500 ms (missing index, N+1 query)
     - _Requirements: 30.1_
@@ -640,10 +653,11 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
 - Groups 1 to 3 (specs, guidelines, commit gate) must finish before any task that creates files under `backend/` or `frontend/`.
 - Each route B1–B29 and each page P1–P6 has one task: B1 (5.1), B2 (5.2), B3 (6.1), B4 (6.2), B5 (6.3), B6 (6.4), B7 (6.5), B8 (7.1), B9 (7.2), B10 (7.3), B11 (7.4), B12 (8.1), B13 (8.2), B14 (8.3), B15 (8.4), B16 (8.5), B17 (9.1), B18 (9.2), B19 (9.3), B20 (9.4), B21 (10.1), B22 (10.2), B23 (11.1), B24 (12.1), B25 (12.2), B26 (4.4), B27 (6.8), B28 (6.9), B29 (6.10); P1 (16.1), P2 (16.2), P3 (16.3), P4 (16.4), P5 (16.8), P6 (16.9).
+- Tasks 16.26 and 18.6 were added to cover design elements that had no task (Column and Card management on P4, and the ProfileForm dirty-state test named in the design's Testing Strategy).
 - Task numbers 6.8–6.11, 16.17 and 16.18 were added in refinement round v2, and 15.12–15.18, 16.19–16.25, 18.5 and 20.5 in round v2.1 (see `CHANGELOG.md`). They keep their numbers so earlier references stay valid.
 - The UI tasks (15.12–15.18, 16.19–16.25) follow the "UI/UX Design System" section of `design.md`; build the tokens (15.12) before any styled component.
 - The comments status tests (9.7) and the component tests (18.1, 18.2) are not optional because Requirements 24.2 and 25.2 demand them.
-- Task 20.4 needs the live deployment, which the user performs on Railway and Vercel.
+- Tasks 19.5 and 20.4 need the live deployment, which the user performs on Vercel (frontend and API) with Supabase.
 
 ## Task Dependency Graph
 
@@ -661,8 +675,8 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 8, "tasks": ["5.3", "5.4", "6.3", "7.3", "8.3", "8.10", "8.11", "9.3", "9.5", "10.5", "12.3", "12.4", "12.5", "16.5", "16.12", "16.15", "16.16", "20.2", "16.19", "16.21", "16.22"]},
     {"id": 9, "tasks": ["6.4", "6.7", "7.4", "7.5", "8.4", "8.8", "9.4", "16.6", "16.13", "16.17", "18.5"]},
     {"id": 10, "tasks": ["6.5", "6.6", "8.5", "8.9", "9.6", "9.7", "16.7", "16.14", "16.18", "18.2", "16.20"]},
-    {"id": 11, "tasks": ["4.6", "6.11", "8.6", "8.7", "10.3", "13.1", "13.2", "13.3", "13.4", "16.11", "20.3"]},
-    {"id": 12, "tasks": ["10.6", "18.3", "21.2", "20.5"]},
+    {"id": 11, "tasks": ["4.6", "6.11", "8.6", "8.7", "10.3", "13.1", "13.2", "13.3", "13.4", "16.11", "20.3", "16.26"]},
+    {"id": 12, "tasks": ["10.6", "18.3", "18.6", "21.2", "20.5"]},
     {"id": 13, "tasks": ["13.5", "21.1"]},
     {"id": 14, "tasks": ["18.4"]},
     {"id": 15, "tasks": ["19.4"]},

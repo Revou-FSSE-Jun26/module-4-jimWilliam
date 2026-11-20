@@ -2,12 +2,12 @@
 
 RevoTask is a Trello-like task manager built through a disciplined, AI-assisted workflow. Teams create boards, organise work into columns, move cards by drag and drop (or with a "Move to" control on touch screens), discuss work in card comments, and track the cards assigned to them. Board admins manage who can access a board and follow progress through analytics and notifications.
 
-It has two parts: a Flask REST API (deployed on Railway) and a Next.js app with a "sea glass" glassmorphism interface (deployed on Vercel).
+It has two parts, both deployed on Vercel: a Flask REST API backed by a Supabase PostgreSQL database, and a Next.js app with a "sea glass" glassmorphism interface.
 
 | | URL |
 |---|---|
 | Next.js app (Vercel) | _add after deploying_ |
-| Flask API (Railway) | _add after deploying_ |
+| Flask API (Vercel) | _add after deploying_ |
 
 ![Board in the dark theme](docs/screenshots/board-1280-dark.png)
 
@@ -26,7 +26,7 @@ It has two parts: a Flask REST API (deployed on Railway) and a Next.js app with 
 
 1. **Brief.** The project brief (`specs/brief.md`) sets the overview, user roles (board member, board admin), core features, tech stack and non-functional requirements.
 2. **Specs with Kiro.** Kiro turned the brief into `requirements.md` (EARS acceptance criteria), `design.md` and `tasks.md`. The first output is kept in `specs-history/v1/`.
-3. **Critical review and refinement.** Each AI-generated document was checked line by line against the brief and the grading rubric. Every gap was fixed with a targeted refinement prompt and recorded with a before and after in `specs/CHANGELOG.md` (19 entries across rounds v2, v2.1 and v3). Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
+3. **Critical review and refinement.** Each AI-generated document was checked line by line against the brief and the grading rubric. Every gap was fixed with a targeted refinement prompt and recorded with a before and after in `specs/CHANGELOG.md` (20 entries across rounds v2, v2.1 and v3). Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
 4. **Steering guidelines first.** `guidelines/backend.md`, `database.md` and `frontend.md` hold 33 rules, each with a Rule, a Rationale and a RevoTask Example. They were committed before any code; `scripts/check-guidelines-first.ps1` verifies the order in the git history.
 5. **Generate, then review against the guidelines.** Code was generated task by task from `tasks.md` with the guidelines in context, and current library APIs were checked against live documentation (Context7 and the Next.js docs bundled in `node_modules`). `guidelines/ai-comparison.md` compares the same prompt with and without guidelines: 8 violations dropped to 0.
 6. **Violations documented and fixed.** `guidelines/violation-report.md` lists 6 violations found in generated code (for example, a removed focus ring, raw colour values instead of tokens, and missing error-status tests), each with the guideline it breaks and the fix.
@@ -50,10 +50,10 @@ It has two parts: a Flask REST API (deployed on Railway) and a Next.js app with 
 
 | Layer | Tools |
 |---|---|
-| Backend | Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Cors, Marshmallow, PostgreSQL (psycopg 3), python-dotenv, Gunicorn |
+| Backend | Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Cors, Marshmallow, PostgreSQL (psycopg 3), python-dotenv; Gunicorn for production-style local runs |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, react-hot-toast |
 | Testing | pytest, Hypothesis, Jest, React Testing Library, fast-check, Playwright, axe-core |
-| Deployment | Railway (Flask API and PostgreSQL), Vercel (Next.js) |
+| Deployment | Vercel (Next.js app, and the Flask API as a Python function), Supabase (PostgreSQL) |
 | AI tools | Kiro and Kiro CLI (specs, steering, generation, tests and docs), with Claude Code used for review and implementation |
 
 ## Project structure
@@ -135,7 +135,7 @@ npm test
 cd frontend
 npx playwright install                 # downloads the browsers (once)
 PLAYWRIGHT_BASE_URL=https://<your-app>.vercel.app \
-PLAYWRIGHT_API_URL=https://<your-api>.up.railway.app \
+PLAYWRIGHT_API_URL=https://<your-api>.vercel.app \
 npx playwright test                    # auth, Kanban journey, visual and accessibility
 npx playwright show-report             # opens the HTML report
 npm run check:no-wait-for-timeout      # fails if any test uses waitForTimeout
@@ -145,20 +145,38 @@ Each run registers new users with unique emails, so it can run repeatedly agains
 
 ## Deploy
 
-### Flask API on Railway
+RevoTask runs on two Vercel projects (the Next.js app and the Flask API) and one Supabase project (PostgreSQL).
 
-1. Create a Railway project with a **PostgreSQL** database and a service from this repository, with the root directory set to `backend`.
-2. Set the service variables: `DATABASE_URL` (reference the Postgres service), `JWT_SECRET_KEY` (a long random string), `JWT_ACCESS_TOKEN_EXPIRES_HOURS=24`, and `FRONTEND_ORIGIN` (your Vercel URL).
-3. `backend/railway.json` runs `flask --app wsgi db upgrade` as the pre-deploy command, starts `gunicorn wsgi:app`, and health-checks `/api/health`.
-4. Verify with Postman: import `docs/postman/RevoTask.postman_collection.json` and the environment, set `baseUrl` to the Railway URL, and run the collection (health, register, login, then one request per Blueprint).
+### 1. Database on Supabase
 
-### Next.js on Vercel
+1. Create a Supabase project and note the database password.
+2. In **Project Settings > Database > Connection string**, copy two URLs and add `?sslmode=require` to both:
+   - the **transaction pooler** (port **6543**), which the deployed API uses;
+   - the **session pooler** or direct connection (port **5432**), which migrations use.
+3. Apply the migrations from your machine over port 5432:
 
-1. Import the repository in Vercel with the root directory set to `frontend`.
-2. Set `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL` to the Railway URL.
-3. Deploy, then add the Vercel URL to `FRONTEND_ORIGIN` on Railway.
-4. Run the Playwright suite against the Vercel URL and commit `frontend/playwright-report/`.
-5. Optional: `python backend/scripts/latency_check.py <railway-url>` checks that p95 latency stays under 500 ms (R30.1).
+   ```bash
+   cd backend
+   DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require" \
+   JWT_SECRET_KEY=unused-for-migrations flask --app wsgi db upgrade
+   ```
+
+   Run this again before deploying any version that adds a migration.
+
+### 2. Flask API on Vercel
+
+1. Create a Vercel project from this repository with the **root directory set to `backend`**. Vercel runs the Flask `app` exported by `wsgi.py`; `backend/vercel.json` keeps tests, migrations and scripts out of the function bundle, and `.python-version` pins Python 3.13.
+2. Set the environment variables: `DATABASE_URL` (the **transaction pooler** URL, port 6543), `JWT_SECRET_KEY` (a long random string), `JWT_ACCESS_TOKEN_EXPIRES_HOURS=24`, and `FRONTEND_ORIGIN` (the frontend Vercel URL, added after step 3). On port 6543 the app turns off prepared statements and client-side pooling automatically, as Supabase's transaction pooler requires.
+3. Deploy, then check that `https://<your-api>.vercel.app/api/health` returns `{"data": {"status": "ok"}}`.
+4. Verify with Postman: import `docs/postman/RevoTask.postman_collection.json` and the environment, set `baseUrl` to the API URL, and run the collection (health, register, login, then one request per Blueprint).
+
+### 3. Next.js on Vercel
+
+1. Create a second Vercel project from this repository with the **root directory set to `frontend`**.
+2. Set `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL` to the API URL from step 2.
+3. Deploy, then set `FRONTEND_ORIGIN` on the API project to this URL and redeploy the API.
+4. Run the Playwright suite against the frontend URL and commit `frontend/playwright-report/`.
+5. Optional: `python backend/scripts/latency_check.py https://<your-api>.vercel.app` checks that p95 latency stays under 500 ms (R30.1). The first request after an idle period can be slower because of a serverless cold start.
 
 ## Screenshots
 
@@ -176,4 +194,4 @@ These were captured by `e2e/visual.spec.ts` against a local production build. Th
 | Card being dragged | ![Drag](docs/screenshots/drag-in-progress-1280-dark.png) | |
 | Notification bell with unread count | ![Notifications](docs/screenshots/notifications-1280-dark.png) | |
 
-Still to add after deployment: the Postman run against the Railway URL showing all 8 Blueprints, and the Playwright HTML report against the Vercel URL.
+Still to add after deployment: the Postman run against the deployed API URL showing all 8 Blueprints, and the Playwright HTML report against the Vercel URL.

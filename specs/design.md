@@ -4,7 +4,7 @@
 
 RevoTask is a Trello-like task manager made of two deployables.
 
-- **Backend**: Flask REST API (SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL, Gunicorn) on Railway.
+- **Backend**: Flask REST API (SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL, Gunicorn locally) on Vercel as a Python function, with PostgreSQL on Supabase.
 - **Frontend**: Next.js App Router application (React, TypeScript, Tailwind CSS, react-hot-toast) on Vercel.
 
 Code examples use Python for the Backend and TypeScript for the Frontend.
@@ -41,8 +41,8 @@ No file under `backend/` or `frontend/` may be added in commits 1 and 2. This ca
 flowchart LR
     Browser -->|HTTPS + Session_Cookie| Vercel[Next.js Frontend]
     Vercel -->|server: API_BASE_URL, Bearer JWT from cookie| API
-    Browser -->|client: NEXT_PUBLIC_API_BASE_URL, Bearer JWT from AuthContext| API[Flask Backend on Railway]
-    API --> DB[(PostgreSQL)]
+    Browser -->|client: NEXT_PUBLIC_API_BASE_URL, Bearer JWT from AuthContext| API[Flask API on Vercel]
+    API -->|transaction pooler :6543| DB[(Supabase PostgreSQL)]
 ```
 
 Backend layout (paths match the brief and rubric exactly):
@@ -212,7 +212,7 @@ Analytics (`analytics/service.py`) joins `Column`, `Card`, `Comment`, `BoardMemb
 
 Notifications are created by services in the same transaction as the triggering change (R31.11): `boards/service.add_member` ("You were added to <board>"), `cards/service.update_card` when `assignee_id` changes to another User ("You were assigned <card>"), and `comments/service.create_comment` when the Card's assignee is not the commenter ("New comment on <card>"). No Notification is created for a User's own actions.
 
-Security configuration (`create_app`): `JWT_SECRET_KEY`, `DATABASE_URL`, `FRONTEND_ORIGIN` and `JWT_ACCESS_TOKEN_EXPIRES_HOURS` come from environment variables; a `postgres://` URL from Railway is rewritten to `postgresql://` for SQLAlchemy; CORS allows only `FRONTEND_ORIGIN` with the `Authorization` and `Content-Type` headers; passwords use `werkzeug.security.generate_password_hash` (salted); all database access goes through SQLAlchemy bound parameters.
+Security configuration (`create_app`): `JWT_SECRET_KEY`, `DATABASE_URL`, `FRONTEND_ORIGIN` and `JWT_ACCESS_TOKEN_EXPIRES_HOURS` come from environment variables; a `postgres://` or `postgresql://` URL is rewritten to `postgresql+psycopg://`; when the URL uses Supabase's transaction pooler (port 6543), `engine_options()` sets `NullPool` and `prepare_threshold=None`, because the pooler shares server connections between transactions and does not support prepared statements; CORS allows only `FRONTEND_ORIGIN` with the `Authorization` and `Content-Type` headers; passwords use `werkzeug.security.generate_password_hash` (salted); all database access goes through SQLAlchemy bound parameters.
 
 ### Frontend
 
@@ -608,7 +608,7 @@ class Card(db.Model):
 | comments | card_id → cards, user_id → users, text |
 | notifications | user_id → users, message, card_id → cards (nullable), board_id → boards (nullable), read (bool, default false) |
 
-Indexes: `cards(column_id, order)`, `cards(assignee_id)`, `columns(board_id, order)`, `board_members(user_id)`, `comments(card_id)`, `notifications(user_id, read)`. Schema changes go through Flask-Migrate; Railway runs `flask db upgrade` before starting `gunicorn wsgi:app` (R27.1, R27.2).
+Indexes: `cards(column_id, order)`, `cards(assignee_id)`, `columns(board_id, order)`, `board_members(user_id)`, `comments(card_id)`, `notifications(user_id, read)`. Schema changes go through Flask-Migrate. Before deploying a version with schema changes, `flask db upgrade` is run against Supabase over the session or direct connection (port 5432); the deployed API on Vercel uses the transaction pooler (port 6543) (R27.1, R27.2, R27.6).
 
 Float precision: repeated midpoint insertion between the same two neighbours exhausts double precision after roughly 50 inserts. R30.5 forbids touching other rows during a move, so no rebalancing is done in a move. This is accepted for the project scope.
 
@@ -696,7 +696,7 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 24.1, 24.2 | — (pytest suite over B1–B29; 24.2 covers B17–B20) |
 | 25.1, 25.2 | — (Jest and React Testing Library over shared components and P4 children) |
 | 26.1–26.6 | — (Playwright over P1, P2, P3, P4; the 8-step journey uses B16 persistence and B17/B19 for comments) |
-| 27.1, 27.2, 27.4 | — (Railway and Vercel deployment) |
+| 27.1, 27.2, 27.4, 27.6 | — (Vercel and Supabase deployment) |
 | 27.3 | B26, B1, B2 |
 | 27.5 | P1–P6 |
 | 28.1, 28.2, 28.3 | — (Repository) |
@@ -1022,6 +1022,6 @@ Criteria not covered by a property are tested by examples, smoke checks or integ
 
 Every wait is a web-first assertion (`expect(...).toBeVisible()`, `toHaveURL`) or `page.waitForResponse` on the B16 call; `waitForTimeout` is banned and a `grep` in CI fails the build if it appears. Each run registers `e2e+<timestamp>@revotask.test`. The HTML report goes to `frontend/playwright-report/` and is committed.
 
-**Integration and smoke.** Postman checks B26, B1 and B2 against Railway. A p95 latency check covers R30.1. A git-history check verifies the guidelines-first order. Mobile viewport checks run at 375 px.
+**Integration and smoke.** Postman checks B26, B1 and B2 against the deployed API. A p95 latency check covers R30.1. A git-history check verifies the guidelines-first order. Mobile viewport checks run at 375 px.
 
 **Tagging.** Each property test carries the tag `Feature: revotask, Property <n>: <property text>`.

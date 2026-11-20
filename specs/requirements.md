@@ -9,12 +9,12 @@ RevoTask has two roles per Board, as defined in the project brief (`brief.md`):
 - **Board_Member**: creates and edits Columns and Cards, moves Cards, comments, and tracks assigned Cards.
 - **Board_Admin**: everything a Board_Member can do, plus managing member access, renaming and deleting the Board, and viewing analytics.
 
-The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL, Gunicorn) deployed on Railway. The Frontend is a Next.js application (React, TypeScript, Tailwind CSS, react-hot-toast) deployed on Vercel.
+The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL) deployed on Vercel as a Python function, with its PostgreSQL database on Supabase. The Frontend is a Next.js application (React, TypeScript, Tailwind CSS, react-hot-toast) deployed on Vercel.
 
 ## Glossary
 
 - **RevoTask**: The complete system, made of the Backend and the Frontend.
-- **Backend**: The Flask REST API deployed on Railway.
+- **Backend**: The Flask REST API deployed on Vercel, using a Supabase PostgreSQL database.
 - **Frontend**: The Next.js web application deployed on Vercel.
 - **Blueprint**: A Flask blueprint package under `app/blueprints/<name>/` containing `routes.py`, `service.py` and `schema.py`. The eight Blueprints are auth, boards, columns, cards, comments, notifications, analytics and users.
 - **Envelope**: The Backend JSON response format. A success response is `{"data": ...}`. An error response is `{"error": "..."}`.
@@ -387,11 +387,12 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 
 #### Acceptance Criteria
 
-1. THE Backend SHALL be deployed on Railway and run with Gunicorn.
-2. WHEN the Backend deploys on Railway, THE deployment process SHALL run `flask db upgrade`.
-3. THE deployment SHALL verify GET /api/health, POST /api/auth/register and POST /api/auth/login in Postman against the Railway URL.
+1. THE Backend SHALL be deployed on Vercel as a Python function serving the Flask WSGI `app` from `wsgi.py`, with its database on Supabase PostgreSQL.
+2. WHEN a Backend version with schema changes is deployed, THE migrations SHALL first be applied to the Supabase database with `flask db upgrade` over the session or direct connection (port 5432).
+3. THE deployment SHALL verify GET /api/health, POST /api/auth/register and POST /api/auth/login in Postman against the deployed API URL.
 4. THE Frontend SHALL be deployed on Vercel.
 5. WHILE the viewport is the Mobile_Viewport, THE Frontend SHALL render every page without page-level horizontal scrolling and with all controls reachable; the Kanban Columns MAY scroll horizontally inside their own container.
+6. WHILE the Backend runs on Vercel, THE Backend SHALL connect through the Supabase transaction pooler (port 6543) with prepared statements disabled and no client-side connection pool.
 
 ### Requirement 28: Repository hygiene
 

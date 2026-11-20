@@ -123,7 +123,7 @@ def handle_unexpected(err):
 
 **Rule:** `JWT_SECRET_KEY`, `DATABASE_URL`, `FRONTEND_ORIGIN` and `JWT_ACCESS_TOKEN_EXPIRES_HOURS` are read in `config.py` from environment variables (python-dotenv locally). No secret appears in code; `.env.example` lists every variable with a placeholder.
 
-**Rationale:** R30.2 and R28.2; the same code runs locally, in tests and on Railway.
+**Rationale:** R30.2 and R28.2; the same code runs locally, in tests and on Vercel against Supabase.
 
 **Example:**
 ```python

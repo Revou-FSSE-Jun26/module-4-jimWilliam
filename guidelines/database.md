@@ -56,7 +56,7 @@ card.column_id, card.order = column.id, data["order"]   # one UPDATE
 
 **Rule:** Never call `db.create_all()` outside tests. Every model change gets a migration (`flask db migrate -m "..."`), reviewed by hand, then applied with `flask db upgrade`.
 
-**Rationale:** R11.5 and R27.2; Railway applies migrations on deploy, so the migration files are the source of truth.
+**Rationale:** R11.5 and R27.2; migrations are applied to Supabase with `flask db upgrade` before each backend deploy, so the migration files are the source of truth.
 
 **Example:**
 ```

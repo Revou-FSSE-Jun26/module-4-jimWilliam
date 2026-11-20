@@ -59,3 +59,14 @@ def test_comment_on_assigned_card_notifies_assignee_only(client, owner, member):
     client.post(f"{url}/comments", json={"text": "update"}, headers=owner["headers"])
     assert "New comment on Write the brief" in _messages(client, member["headers"])
     assert "New comment on Write the brief" not in _messages(client, owner["headers"])
+
+
+def test_supabase_transaction_pooler_disables_prepared_statements_and_pooling():
+    from sqlalchemy.pool import NullPool
+
+    from app.config import _database_url, engine_options
+
+    pooled = engine_options(_database_url("postgresql://postgres.ref:pw@aws-0-x.pooler.supabase.com:6543/postgres?sslmode=require"))
+    assert pooled == {"poolclass": NullPool, "connect_args": {"prepare_threshold": None}}
+    direct = engine_options(_database_url("postgres://postgres.ref:pw@aws-0-x.pooler.supabase.com:5432/postgres"))
+    assert direct == {"pool_pre_ping": True}

@@ -160,6 +160,13 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Why:** fast-check found the counterexample `prev = 999999999.9999987`, `next = 999999999.9999988`: adjacent doubles, so the midpoint equals one of them. R30.5 (a move updates one row) rules out rebalancing during a move, so the property was corrected rather than the code.
 - **Refinement prompt:** "fast-check shows computeOrder cannot stay strictly between adjacent doubles. Restate Property 29 with that precondition and link it to the documented float-precision limitation; keep rebalancing as a follow-up."
 
+### 20. Deployment moved to Vercel and Supabase (project owner's decision)
+
+- **Before (R27.1–R27.3, brief, design, task 19.1):** "THE Backend SHALL be deployed on Railway and run with Gunicorn", with `railway.json` running `flask db upgrade` as a pre-deploy command.
+- **After:** the Flask API is a Vercel Python function (`wsgi.py` exports `app`; `backend/vercel.json` trims the bundle) and the database is Supabase PostgreSQL. A new R27.6 requires the transaction pooler (port 6543) with prepared statements off and no client-side pool; migrations run with `flask db upgrade` over port 5432 before a deploy. `railway.json` and `Procfile` were removed.
+- **Why:** the project owner chose Vercel and Supabase only. Supabase's transaction pooler does not support prepared statements (checked in the Supabase docs via Context7), and serverless functions should not hold their own connection pools, so the engine settings depend on the port.
+- **Refinement prompt:** "We deploy on Vercel and Supabase only. Replace the Railway deployment requirements and config with a Vercel Python function for the Flask API and a Supabase Postgres database, including pooler settings and how migrations are applied."
+
 ---
 
 ## v4 — Template for the next round

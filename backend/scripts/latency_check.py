@@ -1,7 +1,7 @@
 """p95 latency check for R30.1 (non-analytics endpoints under 500 ms at the 95th percentile).
 
 Usage:
-    python scripts/latency_check.py https://YOUR-SERVICE.up.railway.app [requests_per_endpoint]
+    python scripts/latency_check.py https://YOUR-API.vercel.app [requests_per_endpoint]
 
 It registers a throwaway user, creates one board, then times GET /api/health, GET /api/boards and
 GET /api/boards/<id>. Standard library only, so it runs anywhere Python does.

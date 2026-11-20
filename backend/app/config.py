@@ -3,12 +3,13 @@ import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
+from sqlalchemy.pool import NullPool
 
 load_dotenv()
 
 
 def _database_url(raw: str | None) -> str:
-    """Railway provides postgres:// URLs; SQLAlchemy with psycopg 3 needs postgresql+psycopg://."""
+    """Supabase and other hosts give postgres:// or postgresql:// URLs; SQLAlchemy with psycopg 3 needs postgresql+psycopg://."""
     if not raw:
         return "sqlite:///revotask.sqlite3"
     for prefix in ("postgres://", "postgresql://"):
@@ -17,9 +18,22 @@ def _database_url(raw: str | None) -> str:
     return raw
 
 
+def engine_options(url: str) -> dict:
+    """Engine settings for the connection in use.
+
+    On Vercel the API runs as short-lived serverless functions and connects through Supabase's
+    transaction pooler (port 6543). That pooler hands each transaction to any server connection,
+    so prepared statements must be off (psycopg: prepare_threshold=None) and SQLAlchemy must not
+    keep its own pool (NullPool). Direct and session connections (port 5432) keep a normal pool.
+    """
+    if url.startswith("postgresql+psycopg://") and ":6543/" in url:
+        return {"poolclass": NullPool, "connect_args": {"prepare_threshold": None}}
+    return {"pool_pre_ping": True}
+
+
 class Config:
     SQLALCHEMY_DATABASE_URI = _database_url(os.environ.get("DATABASE_URL"))
-    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+    SQLALCHEMY_ENGINE_OPTIONS = engine_options(SQLALCHEMY_DATABASE_URI)
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=float(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_HOURS", "24")))
     FRONTEND_ORIGINS = [o.strip() for o in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",") if o.strip()]

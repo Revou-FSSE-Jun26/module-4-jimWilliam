@@ -36,7 +36,7 @@ Roles are set per board, so the same person can be an admin on one board and a m
 | Backend | Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL, python-dotenv, Gunicorn |
 | Frontend | Next.js (App Router), React, TypeScript, Tailwind CSS, react-hot-toast |
 | Testing | pytest (+ Hypothesis), Jest + React Testing Library (+ fast-check), Playwright |
-| Deployment | Railway (Flask API + PostgreSQL), Vercel (Next.js) |
+| Deployment | Vercel (Next.js app, and the Flask API as a Python function), Supabase (PostgreSQL) |
 | AI tools | Kiro (specs, steering, code generation), Kiro CLI (tests and documentation) |
 
 ## Design direction
@@ -65,6 +65,6 @@ Real-time updates (websockets), file attachments, email delivery, password reset
 
 ## Success criteria
 
-- Both apps are live: the Flask API on Railway and the Next.js app on Vercel.
+- Both apps are live on Vercel (the Next.js app and the Flask API), with the database on Supabase.
 - The live demo covers register, login, create board, add columns, create and drag cards (position persists after reload), add and edit a comment, search for a card, and the notification bell with an unread count.
 - `pytest -v`, `npm test` and the Playwright suite against the live Vercel URL all pass.
