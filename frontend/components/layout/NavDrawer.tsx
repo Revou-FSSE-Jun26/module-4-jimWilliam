@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { NavTree } from "@/components/layout/NavTree";
 import { ProfileMenu } from "@/components/layout/ProfileMenu";
 import { Brand } from "@/components/layout/Sidebar";
+import { TideClock } from "@/components/layout/TideClock";
 import type { Board } from "@/lib/types";
 
 /**
@@ -66,6 +67,7 @@ export function NavDrawer({ boards, open, onClose }: { boards: Board[]; open: bo
             </button>
           </div>
           <NavTree boards={boards} shell="dr" onNavigate={close} />
+          {open && <TideClock />}
           <ProfileMenu idPrefix="dr" />
         </div>
         {/* Tapping the empty area closes the drawer. */}

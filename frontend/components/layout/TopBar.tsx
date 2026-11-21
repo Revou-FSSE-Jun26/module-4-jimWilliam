@@ -7,7 +7,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 /** Sticky Glass_Pane bar with the menu button (below 768 px), the page title and the bell. */
 export function TopBar({ title, onMenu, actions }: { title: ReactNode; onMenu: () => void; actions?: ReactNode }) {
   return (
-    <header className="glass-pane sticky top-3 z-20 flex min-h-16 items-center gap-3 rounded-pane px-3 py-2 md:px-5">
+    <header className="glass-pane topbar-lift sticky top-3 z-20 flex min-h-16 items-center gap-3 rounded-pane px-3 py-2 md:px-5">
       <button
         type="button"
         onClick={onMenu}

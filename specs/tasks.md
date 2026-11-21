@@ -709,6 +709,28 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - The settle helper skips scroll-driven animations, which never finish
     - _Requirements: 38.1, 39.6_
 
+- [x] 25. Board_Stage and Tide_Clock (refinement round v4)
+  - [x] 25.1 Make the board page one viewport tall with full-height columns and hidden-scrollbar card lists
+    - _Requirements: 44.1, 44.5_
+
+  - [x] 25.2 Build KanbanNavigator: edge shades, arrows, wheel-to-sideways and the column dock
+    - _Requirements: 44.2, 44.3, 44.4_
+
+  - [x] 25.3 Hide the page scrollbar with a lifting Top_Bar and a bottom shade (scroll-driven)
+    - _Requirements: 44.5_
+
+  - [x] 25.4 Build `lib/tide.ts`, `useNow` and TideClock; put it in the Sidebar, rail and Nav_Drawer; tie the waves to the tide
+    - _Requirements: 45.1, 45.2, 45.3, 45.4, 45.5_
+
+  - [x] 25.5 Write property tests for the tide and clock formats
+    - **Property 46: The tide is a smooth daily curve**
+    - **Property 47: Clock formats agree**
+    - **Validates: Requirements 45.1, 45.2, 45.3**
+
+  - [x] 25.6 Write component and end-to-end tests for the clock and the stage
+    - `__tests__/stage-and-clock.test.tsx`, `e2e/stage.spec.ts`
+    - _Requirements: 44.1, 44.3, 44.4, 45.2_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
@@ -749,7 +771,9 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 20, "tasks": ["23.8", "23.10", "23.11"]},
     {"id": 21, "tasks": ["23.12", "23.13", "24.1"]},
     {"id": 22, "tasks": ["24.2"]},
-    {"id": 23, "tasks": ["24.3"]}
+    {"id": 23, "tasks": ["24.3", "25.1", "25.4"]},
+    {"id": 24, "tasks": ["25.2", "25.3", "25.5"]},
+    {"id": 25, "tasks": ["25.6"]}
   ]
 }
 ```

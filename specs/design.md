@@ -510,6 +510,21 @@ The menu follows the popup menu pattern (R36.2–R36.4):
 
 With a photo (R41.4), the Avatar renders the AVIF through ProtectedImage inside the same circle; if the image fails to load (for example a Signed_URL that expired while the page stayed open), it falls back to the initials.
 
+### Board_Stage (R44)
+
+- `.app-main:has(.board-stage)` becomes a flex column exactly `100dvh` tall; `.board-stage` takes the remaining height (`flex: 1 1 0`, at least 22rem) and holds the Kanban row and the dock. Other pages keep normal document scrolling.
+- `.kanban-row` is `overflow-x: auto; scrollbar-width: none` with `scroll-padding-inline` equal to its padding, so snapping to the first column leaves `scrollLeft` at 0. Columns use `align-items: stretch`; the card list is the flexible part and scrolls with the same faded edges as the Nav_Tree (`align-content: start` keeps cards packed at the top). The "Add a column" form keeps its natural height.
+- **No mask on the row.** A mask would make the row a backdrop root, so the columns' `backdrop-filter` could no longer see the page behind it. Edge shades are separate absolutely positioned gradients (themselves masked top and bottom) toggled by `data-shown`.
+- **KanbanNavigator** (`components/board/KanbanNavigator.tsx`) measures the row on scroll (one `requestAnimationFrame` per frame) and on resize (`ResizeObserver`): overflow, `canLeft`, `canRight` and the columns at least half in view. It renders the edge shades, arrow buttons (hidden for coarse pointers) and the dock (`<nav aria-label="Jump to a column">`, chips with `aria-current`). A non-passive `wheel` listener turns vertical wheel movement into sideways scrolling unless the card list under the pointer can scroll that way or the row is already at that end. Smooth scrolling is skipped under reduced motion.
+- **Page scrolling (R44.5).** Where `animation-timeline: scroll()` is supported the root scrollbar is hidden; the Top_Bar gets a `scroll(root)` animation over the first 5rem that deepens its shadow, and a fixed `.page-fade` gradient at the bottom fades out over the last 10% of the scroll. When the page cannot scroll the timeline is inactive and neither shows. The visual suite's settle helper ignores scroll-driven animations, which never finish.
+
+### Tide_Clock (R45)
+
+- `lib/tide.ts`: `tideLevel(date) = 0.5 + 0.5·cos(2π·(h − 15)/24)` (1 at 15:00, 0 at 03:00), `tideTrend` (rising from 03:00 to 15:00), `dayPart`, `clockParts` (24-hour or 12-hour with AM/PM).
+- `hooks/useNow.ts`: `useSyncExternalStore` whose snapshot is the current minute (stable for the whole minute) and whose server snapshot is `null`. One timeout armed for 50 ms after the next minute boundary, re-armed after each tick and on `visibilitychange`.
+- `components/layout/TideClock.tsx`: a `<section aria-label="Clock">` with a `<button>` around `<time dateTime>` in the display face (2.5rem, tabular figures, a breathing colon that stops under reduced motion), the date and tide line, and a link chip "N cards assigned to you" (one fetch of B13 per mount; failures are silent because it is decorative). There is no `aria-live`. The 12/24-hour choice is stored in `localStorage` under `revotask_clock` and shared through a custom event. While `useNow()` is `null` it renders an invisible placeholder of the same height.
+- The Sidebar renders the full and compact clocks and CSS shows one: full in the expanded sidebar, compact (hours and minutes on one line) on the rail. The Sidebar passes `--tide-level` to the tide SVG, which translates up to 3.5rem lower at low tide with a 1.2 s transition.
+
 ### Media and rich text (R40–R43)
 
 **Upload pipeline (backend `app/common/images.py`):** the request body (at most 4 MB, `MAX_CONTENT_LENGTH`, under Vercel's 4.5 MB limit) is read into memory. Pillow opens it with `formats=("JPEG","PNG","WEBP","GIF","AVIF","BMP","TIFF")`, refuses more than 40 megapixels before decoding (decompression-bomb warnings are errors), applies the EXIF orientation, converts to RGB or RGBA, clears `info` (EXIF, XMP, comments; the ICC profile is kept) and saves AVIF at speed 8. Avatars use `ImageOps.fit` to a square of at most 512 px at quality 70; attachments are resized to 2048 px (quality 65) and 480 px (quality 55). The original bytes go out of scope with the request.
@@ -778,6 +793,10 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 43.1 | B30, B33 |
 | 43.2, 43.3 | B35 |
 | 43.4, 43.5 | P4, P6 (ProtectedImage, ImageLightbox, `lib/upload.ts`) |
+| 44.1–44.4 | P4 (Board_Stage, KanbanNavigator; data from B5) |
+| 44.5 | P1–P6 (document, Nav_Tree and card list scrolling) |
+| 45.1–45.3, 45.5 | P3–P6 (Sidebar, Nav_Drawer: TideClock) |
+| 45.4 | P3–P6 (TideClock; calls B13) |
 
 ## Error Handling
 
@@ -1074,13 +1093,25 @@ For any uploader (admin or member) and any remover (admin, the uploader, another
 
 **Validates: Requirements 42.4**
 
+### Property 46: The tide is a smooth daily curve
+
+For any time of day, `tideLevel` is in [0, 1], equals 1 at 15:00 and 0 at 03:00, and over the next minute does not fall while `tideTrend` says rising nor rise while it says falling.
+
+**Validates: Requirements 45.1, 45.3**
+
+### Property 47: Clock formats agree
+
+For any time of day, the 24-hour parts are the zero-padded hour and minute with no suffix, and the 12-hour parts have an hour from 1 to 12 and an AM/PM suffix that convert back to the same hour, with the same minutes.
+
+**Validates: Requirements 45.2**
+
 ### Property 45: Editor links use only http, https or mailto
 
 For any string typed into the link field, `normaliseLink` returns null or a URL starting with `http://`, `https://` or `mailto:`.
 
 **Validates: Requirements 40.3**
 
-Criteria not covered by a property are tested by examples, smoke checks or integration tests: page and component rendering (12.1–12.5, 12.7, 13.x, 14.2–14.5, 16.1–16.3, 16.6, 17.1, 17.3–17.6, 18.x, 19.2, 19.5, 20.x, 31.12, 31.13, 32.7, 33.1, 33.3), membership and notification examples (31.1, 31.5, 31.6, 31.9–31.11), session behaviour (32.1–32.5, covered by the Playwright auth scenarios and the reload step), structure and configuration (1.8, 4.1, 8.2, 11.1, 11.2, 11.5, 15.1, 21.1–21.3, 21.8, 30.2, 30.3), health (10.1), deliverables (22–29, including 26.6), latency (30.1), and the visual design criteria (34.1, 34.2, 34.4, 34.5, 34.7–34.9, 35.x, 36.1–36.4, 36.8–36.10, 37.x, 38.2–38.8, 39.1–39.3, 39.5, 39.6), which are covered by component tests and the Playwright visual suite, and the media and editor criteria (40.1, 40.2, 40.5, 40.6, 41.2–41.6, 42.2, 42.3, 42.5, 42.6, 43.1, 43.3–43.5), covered by `backend/tests/test_media.py`, `frontend/__tests__/media-and-editor.test.tsx` and `frontend/e2e/media.spec.ts`.
+Criteria not covered by a property are tested by examples, smoke checks or integration tests: page and component rendering (12.1–12.5, 12.7, 13.x, 14.2–14.5, 16.1–16.3, 16.6, 17.1, 17.3–17.6, 18.x, 19.2, 19.5, 20.x, 31.12, 31.13, 32.7, 33.1, 33.3), membership and notification examples (31.1, 31.5, 31.6, 31.9–31.11), session behaviour (32.1–32.5, covered by the Playwright auth scenarios and the reload step), structure and configuration (1.8, 4.1, 8.2, 11.1, 11.2, 11.5, 15.1, 21.1–21.3, 21.8, 30.2, 30.3), health (10.1), deliverables (22–29, including 26.6), latency (30.1), and the visual design criteria (34.1, 34.2, 34.4, 34.5, 34.7–34.9, 35.x, 36.1–36.4, 36.8–36.10, 37.x, 38.2–38.8, 39.1–39.3, 39.5, 39.6), which are covered by component tests and the Playwright visual suite, and the media and editor criteria (40.1, 40.2, 40.5, 40.6, 41.2–41.6, 42.2, 42.3, 42.5, 42.6, 43.1, 43.3–43.5), covered by `backend/tests/test_media.py`, `frontend/__tests__/media-and-editor.test.tsx` and `frontend/e2e/media.spec.ts`, and the stage and clock criteria (44.1–44.5, 45.1, 45.2, 45.4, 45.5), covered by `frontend/__tests__/stage-and-clock.test.tsx`, `frontend/e2e/stage.spec.ts` and the visual suite.
 
 ## Testing Strategy
 

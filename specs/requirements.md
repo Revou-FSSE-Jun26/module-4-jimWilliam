@@ -19,6 +19,8 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 - **Blueprint**: A Flask blueprint package under `app/blueprints/<name>/` containing `routes.py`, `service.py` and `schema.py`. The brief's eight Blueprints are auth, boards, columns, cards, comments, notifications, analytics and users; a ninth, media, holds card images and signed image delivery (R42, R43).
 - **Media**: An uploaded image stored by the Backend as AVIF: a User's avatar or a Card attachment.
 - **Signed_URL**: A short-lived image URL carrying its own expiry and HMAC signature, so `<img>` tags can load it without the JWT.
+- **Board_Stage**: The area of /boards/[id] below the Top_Bar that holds the Kanban columns and the column dock.
+- **Tide_Clock**: The clock above the Profile_Capsule showing the time, the date and the tide of the day.
 - **Envelope**: The Backend JSON response format. A success response is `{"data": ...}`. An error response is `{"error": "..."}`.
 - **User**: A registered person with a name, email and password.
 - **Board**: A container with a `name` that holds Columns. Each Board has one or more Board_Admins.
@@ -618,3 +620,27 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 3. THE image response SHALL have `Content-Type: image/avif`, `Content-Disposition: inline`, `X-Content-Type-Options: nosniff` and a private cache lifetime that ends at the URL's expiry.
 4. THE Frontend SHALL show every uploaded image through a protected image component that blocks the context menu, dragging, selection and the iOS long-press callout, with a transparent shield over the image, and SHALL hide images when printing.
 5. THE Frontend SHALL check the file type and the 4 MB limit before uploading and show a toast for a rejected file.
+
+### Requirement 44: Full-height Board_Stage and quiet scrolling
+
+**User Story:** As a User, I want the board to fill my screen and to move between columns easily, so that I see more of my work and never fight scrollbars.
+
+#### Acceptance Criteria
+
+1. THE /boards/[id] page SHALL be exactly one viewport tall: the Board_Stage SHALL fill the height below the Top_Bar, and each Column SHALL stretch to the bottom of the Board_Stage with its card list scrolling inside it.
+2. THE Kanban row SHALL scroll sideways without a visible scrollbar; WHEN it can scroll further left or right, THE Board_Stage SHALL show a soft edge shade and, for fine pointers, an arrow button on that side that scrolls by most of a screen.
+3. WHEN a vertical mouse wheel turns over the Kanban row and the card list under the pointer cannot scroll that way, THE Kanban row SHALL scroll sideways instead; at either end the page SHALL keep the wheel.
+4. WHILE the Kanban row overflows, THE Board_Stage SHALL show a dock with one chip per Column (name and card count), marking the Columns at least half in view with `aria-current`, and activating a chip SHALL scroll that Column to the start of the row.
+5. WHERE the browser supports scroll-driven animations, THE document, the Nav_Tree and each card list SHALL scroll without a visible scrollbar, with faded edges that show more content; THE Top_Bar SHALL lift with a deeper shadow once the page scrolls, and a shade at the bottom of the viewport SHALL mark more content until the end is reached. Elsewhere a thin tinted scrollbar SHALL show.
+
+### Requirement 45: Tide_Clock
+
+**User Story:** As a User, I want to see the time and my workload at a glance, so that I can plan the rest of my day without leaving the board.
+
+#### Acceptance Criteria
+
+1. THE Sidebar SHALL show the Tide_Clock above the Profile_Capsule with the time (hours and minutes), the short date, the part of the day and whether the tide is rising or falling; THE icon rail SHALL show the time only, and THE Nav_Drawer SHALL show the full Tide_Clock.
+2. WHEN a User activates the time, THE Tide_Clock SHALL switch between 24-hour and 12-hour formats and remember the choice in that browser; the time button's accessible name SHALL include the full time and date.
+3. THE tide level SHALL follow a smooth daily curve between 0 at 03:00 and 1 at 15:00, and THE Sidebar's waves SHALL rise and fall with it.
+4. THE expanded Tide_Clock SHALL link to /my-tasks with the number of cards assigned to the User.
+5. THE Tide_Clock SHALL update on each minute boundary and when the tab becomes visible again, SHALL render no time during server rendering (so hydration never mismatches), and SHALL NOT announce each minute to screen readers.

@@ -531,6 +531,8 @@ dialog.base-modal[open]::backdrop { opacity: 1; }
   min-block-size: 100dvh;
   padding: 0.75rem;
 }
+/* Board_Stage (R44): the board page never scrolls as a page; its columns fill the height instead. */
+.app-main:has(.board-stage) { display: flex; flex-direction: column; block-size: 100dvh; }
 @media (width >= 48rem) { .app-main { padding-inline-start: calc(5.5rem + 1rem); } }
 @media (width >= 80rem) { .app-main { padding-inline-start: calc(18rem + 1.25rem); } }
 
@@ -594,20 +596,20 @@ dialog.base-modal[open]::backdrop { opacity: 1; }
    fade the edges instead (scroll-driven animation); elsewhere a thin tinted scrollbar remains. */
 @property --fade-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
 @property --fade-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
-.nav-scroll {
+.nav-scroll, .card-list {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--seaglass) 35%, transparent) transparent;
   padding-block: 0.125rem;
 }
 @supports (animation-timeline: scroll()) {
-  .nav-scroll {
+  .nav-scroll, .card-list {
     scrollbar-width: none;
     -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
     mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
     animation: nav-fade linear both;
     animation-timeline: scroll(self block);
   }
-  .nav-scroll::-webkit-scrollbar { display: none; }
+  .nav-scroll::-webkit-scrollbar, .card-list::-webkit-scrollbar { display: none; }
 }
 @keyframes nav-fade {
   0% { --fade-top: 0px; --fade-bottom: 2.5rem; }
@@ -774,23 +776,115 @@ dialog.nav-drawer::backdrop { background: rgb(5 20 25 / 0.55); }
 /* ==========================================================================
    Kanban (R38.4, R37.8)
    ========================================================================== */
+.board-stage {
+  position: relative;
+  flex: 1 1 0;
+  min-block-size: 22rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
 .kanban-row {
+  flex: 1 1 0;
+  min-block-size: 0;
   display: flex;
   gap: 1rem;
-  align-items: flex-start;
+  align-items: stretch;
   overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
-  padding-block: 0.25rem 1rem;
+  scroll-padding-inline: 0.25rem;   /* snapping to the first column leaves scrollLeft at 0 */
+  scrollbar-width: none;   /* arrows, the dock, the wheel and swipes scroll it instead */
+  padding-block: 0.25rem 0.5rem;
   padding-inline: 0.25rem;
 }
+.kanban-row::-webkit-scrollbar { display: none; }
 .kanban-column {
   flex: 0 0 85vw;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  max-block-size: calc(100dvh - 9rem);
+  min-block-size: 0;
   border-radius: var(--radius-pane);
+}
+.kanban-add { align-self: flex-start; }
+
+/* Edge shades and arrows appear only where there is more to see. */
+.kanban-edge {
+  position: absolute;
+  inset-block: 0 3.25rem;
+  inline-size: 3.5rem;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.kanban-edge-start { inset-inline-start: 0; background: linear-gradient(to right, color-mix(in srgb, var(--abyss) 85%, transparent), transparent); }
+.kanban-edge-end { inset-inline-end: 0; background: linear-gradient(to left, color-mix(in srgb, var(--abyss) 85%, transparent), transparent); }
+.kanban-edge[data-shown] { opacity: 1; }
+.kanban-edge {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+}
+.kanban-arrow {
+  position: absolute;
+  inset-block-start: 45%;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: var(--radius-pill);
+  color: var(--foam);
+  transition: scale var(--dur-quick) var(--ease-out);
+}
+.kanban-arrow:hover { scale: 1.08; }
+.kanban-arrow-start { inset-inline-start: 0.375rem; }
+.kanban-arrow-end { inset-inline-end: 0.375rem; }
+@media (pointer: coarse) { .kanban-arrow { display: none; } }
+
+/* Dock: one chip per column; chips in view are lit, a click glides to that column. */
+.kanban-dock {
+  flex: none;
+  align-self: center;
+  max-inline-size: 100%;
+  padding: 0.25rem;
+  border-radius: var(--radius-pill);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.kanban-dock::-webkit-scrollbar { display: none; }
+.kanban-dock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-block-size: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  transition: background-color var(--dur-quick) var(--ease-out), color var(--dur-quick) var(--ease-out);
+}
+.kanban-dock-chip:hover { background: var(--hover-tint); color: var(--foam); }
+.kanban-dock-chip[data-in-view] { color: var(--foam); background: color-mix(in srgb, var(--seaglass) 16%, transparent); }
+.kanban-dock-dot {
+  inline-size: 0.45rem;
+  block-size: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  transition: scale var(--dur-quick) var(--ease-out), background-color var(--dur-quick);
+}
+.kanban-dock-chip[data-in-view] .kanban-dock-dot { background: var(--seaglass); opacity: 1; scale: 1.3; }
+.kanban-dock-name { max-inline-size: 9rem; overflow: hidden; text-overflow: ellipsis; }
+.kanban-dock-count { font-variant-numeric: tabular-nums; font-size: 0.75rem; opacity: 0.8; }
+@media (pointer: coarse) { .kanban-dock-chip { min-block-size: 2.75rem; } }
+@media (forced-colors: active) {
+  .kanban-edge { display: none; }
+  .kanban-dock-chip[data-in-view] { outline: 2px solid Highlight; }
 }
 @media (width >= 48rem) {
   .kanban-row { scroll-snap-type: x proximity; }
@@ -800,7 +894,7 @@ dialog.nav-drawer::backdrop { background: rgb(5 20 25 / 0.55); }
   border-color: var(--seaglass);
   box-shadow: inset 0 0 0 1px var(--seaglass), var(--elev-2);
 }
-.card-list { overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 0.625rem; padding: 0.25rem; }
+.card-list { overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; gap: 0.625rem; padding: 0.25rem; }
 .card-item { container-type: inline-size; border-radius: var(--radius-pebble); }
 .card-item[data-dragging="true"] { opacity: 0.6; }
 @media (prefers-reduced-motion: no-preference) {
@@ -1100,3 +1194,104 @@ dialog.lightbox figure { animation: lightbox-in 260ms var(--ease-out) both; }
 .rich-text a { color: var(--seaglass); text-decoration: underline; text-underline-offset: 2px; }
 .rich-text hr { border: 0; border-block-start: 1px solid var(--rim); }
 .rich-text strong { font-weight: 700; }
+
+
+/* ==========================================================================
+   Page scrolling (R44.5): the document scrolls without a visible scrollbar where the browser can
+   show progress instead; the Top_Bar lifts once the page moves and a soft shade marks more below.
+   ========================================================================== */
+.page-fade {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 4.5rem;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(to top, color-mix(in srgb, var(--abyss) 80%, transparent), transparent);
+}
+html { scrollbar-color: color-mix(in srgb, var(--seaglass) 40%, transparent) transparent; }
+@supports (animation-timeline: scroll()) {
+  html { scrollbar-width: none; }
+  html::-webkit-scrollbar { display: none; }
+  .topbar-lift {
+    animation: topbar-lift linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 5rem;
+  }
+  .page-fade {
+    animation: page-fade linear both;
+    animation-timeline: scroll(root block);
+  }
+}
+@keyframes topbar-lift { to { box-shadow: inset 0 1px 0 var(--highlight), var(--elev-3); } }
+@keyframes page-fade {
+  0%, 90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ==========================================================================
+   Tide_Clock (R45): time, date and tide above the Profile_Capsule
+   ========================================================================== */
+.tide-clock {
+  display: grid;
+  justify-items: start;
+  gap: 0.2rem;
+  padding: 0.25rem 0.5rem 0.75rem;
+}
+.tide-clock[data-pending] { min-block-size: 6.75rem; }
+.tide-clock-compact[data-pending] { min-block-size: 3.25rem; }
+.tide-clock-time {
+  margin-inline-start: -0.375rem;
+  padding: 0 0.375rem;
+  border-radius: 0.75rem;
+  color: var(--foam);
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur-quick) var(--ease-out);
+}
+.tide-clock-time:hover { background: var(--hover-tint); }
+.tide-clock-colon { display: inline-block; margin-inline: 0.04em; }
+@media (prefers-reduced-motion: no-preference) {
+  .tide-clock-colon { animation: colon-breathe 2s ease-in-out infinite; }
+}
+@keyframes colon-breathe { 50% { opacity: 0.35; } }
+.tide-clock-suffix {
+  margin-inline-start: 0.35rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.tide-clock-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; color: var(--muted); font-size: 0.8125rem; }
+.tide-clock-tasks {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-block-start: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--seaglass) 16%, transparent);
+  color: var(--foam);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  transition: background-color var(--dur-quick) var(--ease-out);
+}
+.tide-clock-tasks:hover { background: color-mix(in srgb, var(--seaglass) 28%, transparent); }
+.tide-clock-compact { display: none; }
+/* Rail: only the stacked hours and minutes. */
+@media (width >= 48rem) and (width < 80rem) {
+  .sidebar .tide-clock:not(.tide-clock-compact) { display: none; }
+  .sidebar .tide-clock-compact { display: grid; justify-items: center; padding: 0 0 0.5rem; }
+  .sidebar .tide-clock-compact .tide-clock-time { margin: 0; font-size: 1rem; line-height: 1.2; padding: 0.25rem 0.375rem; }
+}
+/* The waves follow the tide: about 3.5rem lower at low tide (03:00) than at high tide (15:00). */
+.sidebar-tide {
+  translate: 0 calc((1 - var(--tide-level, 0.6)) * 3.5rem);
+  transition: translate 1.2s var(--ease-out);
+}

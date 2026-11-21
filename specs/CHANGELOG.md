@@ -185,6 +185,13 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Why:** the project owner saw a scrollbar in the sidebar and asked for a more interesting, full-height design. Two nested scrollers made the cut-off likely, and a floating pane wasted height on small laptops. The visual suite's settle helper waited for every running animation to finish; scroll-driven animations never finish, so it now skips them.
 - **Refinement prompt:** "There was a scroll in the sidebar. Change the design to be more interesting and full height."
 
+### 23. Full-height board, quiet scrolling and the Tide_Clock (project owner's request)
+
+- **Before (R38.4, design "Kanban"):** Columns were capped at `100dvh - 9rem` and sized to their content, the Kanban row showed a horizontal scrollbar, a mouse wheel could not move it sideways, and the document showed its own scrollbar. There was no clock.
+- **After:** new Requirements 44 and 45, Properties 46 and 47, task group 25. The board page is one viewport tall; columns run to the bottom and only their card lists scroll. The row scrolls sideways with no scrollbar, edge shades and arrows where there is more, the wheel turned sideways, and a dock of column chips that shows what is in view and jumps to a column. Document, nav and card-list scrollbars are hidden where scroll-driven animations can show progress instead (a lifting Top_Bar and a bottom shade). The Tide_Clock sits above the Profile_Capsule: time (click for 12/24-hour), date, the tide of the day, and a link to the cards assigned to you; the sidebar's waves rise and fall with the same tide.
+- **Why:** the project owner asked for the main page to scroll like the sidebar (down and sideways), to be full width and full height, and for a clock placed where it reads best. The clock goes above the profile rather than bottom right, because the bottom right of the board is where the last column and the dock live, and because tying it to the existing tide decoration makes it part of the design instead of a widget on top. The row is not masked for its fades: a mask would make it a backdrop root and break the columns' glass blur.
+- **Refinement prompt:** "Make the main page scroll down and left/right like the sidebar, full width and full height, and more interesting. Add a clock, in the bottom right or above the profile at the bottom left, with a brilliant idea."
+
 ---
 
 ## v5 — Template for the next round

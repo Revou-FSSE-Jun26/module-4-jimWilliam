@@ -115,8 +115,8 @@ Sign in with the shared demo account to explore a board that already has columns
       Add, rename, reorder and delete columns. Create, edit, assign and soft-delete cards. Moves use a FLOAT order, so each move updates one database row.
     </td>
     <td valign="top">
-      <h4>🖐️ Drag and drop, on any device</h4>
-      Native HTML5 drag and drop with an optimistic update that reverts if the server refuses, plus a keyboard and touch "Move to" control that runs the same move.
+      <h4>🖐️ A full-screen board, on any device</h4>
+      Columns run the full height of the screen and scroll sideways with the mouse wheel, arrows or a dock of column chips. Native drag and drop with an optimistic update, plus a keyboard and touch "Move to" control.
     </td>
   </tr>
   <tr>
@@ -131,8 +131,8 @@ Sign in with the shared demo account to explore a board that already has columns
   </tr>
   <tr>
     <td valign="top">
-      <h4>🔔 Notifications</h4>
-      A bell with an unread count, checked every 30 seconds. You're notified when you're added to a board, assigned a card, or someone comments on your card.
+      <h4>🔔 Notifications and the Tide clock</h4>
+      A bell with an unread count, checked every 30 seconds. Above your profile, the Tide clock shows the time, the date and your assigned cards, and the sidebar's waves rise towards 15:00 and ebb overnight.
     </td>
     <td valign="top">
       <h4>📊 Analytics for admins</h4>
@@ -229,16 +229,16 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>22 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
+    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>23 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
 ```
 
 1. **Brief.** `specs/brief.md` sets the overview, the two user roles, the core features, the tech stack and the non-functional requirements.
 2. **Specs with Kiro.** Kiro turned the brief into `requirements.md` (EARS acceptance criteria), `design.md` and `tasks.md`. The first version is kept in `specs-history/v1/`.
-3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 22 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
+3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 23 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
 4. **Steering guidelines first.** `guidelines/` holds 33 rules (backend, database, frontend), each with a Rule, a Rationale and a RevoTask Example. They were committed before any code, and `scripts/check-guidelines-first.ps1` verifies that order in the git history.
 5. **Generate, then review.** Code was generated task by task with the guidelines in context, and library APIs were checked against current documentation (Context7 and the Next.js docs bundled with the package). `guidelines/ai-comparison.md` compares the same prompt with and without guidelines: 8 violations dropped to 0.
 6. **Violations documented.** `guidelines/violation-report.md` lists 6 violations found in generated code, each with the guideline it breaks and the fix.
-7. **Tests.** Every one of the 45 correctness properties in `design.md` has a test. The tests also caught real bugs: a drag that could not start from a button, an accessibility name mismatch, colours that failed their own contrast targets, and an empty error message.
+7. **Tests.** Every one of the 47 correctness properties in `design.md` has a test. The tests also caught real bugs: a drag that could not start from a button, an accessibility name mismatch, colours that failed their own contrast targets, and an empty error message.
 
 ## Run it locally
 
@@ -287,8 +287,8 @@ Then sign in with the [demo account](#live-demo-and-demo-account).
 | Suite | Command | What it covers | Result |
 |---|---|---|---|
 | **Backend** | `cd backend && pytest -v` | Every route and error status, plus 29 Hypothesis properties | ✅ 131 passed |
-| **Frontend** | `cd frontend && npm test` | Components, pages and hooks, plus 14 fast-check properties | ✅ 109 passed |
-| **End to end** | `cd frontend && npx playwright test` | 4 auth scenarios, the 8-step Kanban journey, photo and image uploads, layouts at 7 widths, axe scans | ✅ 14 passed |
+| **Frontend** | `cd frontend && npm test` | Components, pages and hooks, plus 16 fast-check properties | ✅ 114 passed |
+| **End to end** | `cd frontend && npx playwright test` | 4 auth scenarios, the 8-step Kanban journey, photo and image uploads, the full-height board and clock, layouts at 7 widths, axe scans | ✅ 15 passed |
 
 <details>
 <summary><b>More test commands</b></summary>
@@ -398,7 +398,7 @@ revotask/
 | [`specs/requirements.md`](specs/requirements.md) | 39 requirements with EARS acceptance criteria |
 | [`specs/design.md`](specs/design.md) | Architecture, routes, UI/UX design system, 40 correctness properties, traceability |
 | [`specs/tasks.md`](specs/tasks.md) | The implementation plan, with progress |
-| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 22 refinements, each with a before and an after |
+| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 23 refinements, each with a before and an after |
 | [`guidelines/`](guidelines/) | Steering guidelines, the AI output comparison and the violation report |
 | [`docs/postman/`](docs/postman/) | Postman collection and environment for the deployed API |
 

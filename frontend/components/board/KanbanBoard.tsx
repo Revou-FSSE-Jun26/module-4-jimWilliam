@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { AnalyticsPanel } from "@/components/board/AnalyticsPanel";
 import { ColumnView } from "@/components/board/ColumnView";
+import { KanbanNavigator } from "@/components/board/KanbanNavigator";
 import { MembersPanel } from "@/components/board/MembersPanel";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { Field } from "@/components/forms/Field";
@@ -26,6 +27,8 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
   const handleError = useErrorHandler();
   const [board, setBoard] = useState(initialBoard);
   const [columns, setColumns] = useState<BoardColumn[]>(() => sortBoard(initialBoard.columns));
+  const rowRef = useRef<HTMLDivElement>(null);
+  const navColumns = useMemo(() => columns.map((c) => ({ id: c.id, name: c.name, count: c.cards.length })), [columns]);
   const [firstLoad, setFirstLoad] = useState(true);
   const [openCard, setOpenCard] = useState<Card | null>(null);
   const [focusCardId, setFocusCardId] = useState<string | null>(null);
@@ -142,7 +145,9 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
         </section>
       )}
 
-      <div className="kanban-row mt-4" role="region" aria-label="Columns">
+      {/* Board_Stage (R44): fills the rest of the viewport; columns run full height and scroll sideways. */}
+      <div className="board-stage mt-4">
+      <div ref={rowRef} className="kanban-row" role="region" aria-label="Columns">
         {columns.map((column, i) => (
           <ColumnView
             key={column.id}
@@ -164,11 +169,13 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
             onDrop={dnd.onColumnDrop}
           />
         ))}
-        <form onSubmit={addColumn} className="kanban-column glass-pane enter grid content-start gap-3 border-dashed p-4" aria-label="Add a column">
+        <form onSubmit={addColumn} className="kanban-column kanban-add glass-pane enter grid content-start gap-3 border-dashed p-4" aria-label="Add a column">
           <h2 className="text-lg">Add a column</h2>
           <Field label="Column name" value={newColumn} onChange={(e) => setNewColumn(e.target.value)} maxLength={120} />
           <BaseButton type="submit" variant="secondary" disabled={!newColumn.trim()}>Add column</BaseButton>
         </form>
+      </div>
+      <KanbanNavigator rowRef={rowRef} columns={navColumns} />
       </div>
 
       <CardDetailModal card={openCard} boardId={board.id} role={board.role} onClose={closeCard} onUpdated={updateCard} onDeleted={deleteCard} />

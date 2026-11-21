@@ -35,6 +35,7 @@ export function AppShell({ boards, children }: { boards: Board[]; children: Reac
       <Sidebar boards={boards} />
       <NavDrawer boards={boards} open={drawerOpen} onClose={closeDrawer} />
       <div className="app-main">{children}</div>
+      <div className="page-fade" aria-hidden="true" />
     </ShellContext>
   );
 }
