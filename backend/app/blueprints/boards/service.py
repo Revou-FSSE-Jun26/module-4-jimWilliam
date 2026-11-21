@@ -1,16 +1,24 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from app.blueprints.boards.schema import BoardNameSchema, MemberAddSchema
+from urllib.parse import urlsplit
+
+from app.blueprints.boards.schema import (
+    BoardLinkCreateSchema, BoardNameSchema, BoardNotesSchema, BoardUpdateSchema, MemberAddSchema,
+)
 from app.common.access import get_board_or_404, require_member, notify
 from app.common.errors import AppError
+from app.common.richtext import clean_description
 from app.extensions import db
-from app.models import Board, BoardMember, Card, Column, Comment, Media, User
+from app.models import Board, BoardLink, BoardMember, Card, Column, Comment, Media, User
+
+MAX_LINKS_PER_BOARD = 30
+MAX_NOTES_TEXT = 20_000
 
 
 def create_board(user_id, payload) -> Board:
     data = BoardNameSchema().load(payload or {})
-    board = Board(name=data["name"], created_by=user_id)
+    board = Board(name=data["name"], purpose=data.get("purpose"), color_hue=data.get("color_hue"), created_by=user_id)
     db.session.add(board)
     db.session.flush()
     db.session.add(BoardMember(board_id=board.id, user_id=user_id, role="admin"))
@@ -79,10 +87,13 @@ def get_board_detail(board_id, user_id) -> Board:
 
 
 def rename_board(board_id, user_id, payload) -> Board:
+    """Board settings (admins): name, purpose and colour; any subset (R47.2, R48.1)."""
     membership = require_member(board_id, user_id, admin=True)
-    data = BoardNameSchema().load(payload or {})
+    data = BoardUpdateSchema().load(payload or {})
     board = get_board_or_404(board_id)
-    board.name = data["name"]
+    for key in ("name", "purpose", "color_hue"):
+        if key in data:
+            setattr(board, key, data[key])
     db.session.commit()
     board.role = membership.role
     return board
@@ -133,4 +144,51 @@ def remove_member(board_id, user_id, member_user_id) -> None:
         if admins <= 1:
             raise AppError("A board needs at least one admin", 409)
     db.session.delete(membership)
+    db.session.commit()
+
+
+# ----- board brief: notes and links (R47) -------------------------------------------------------
+
+def update_notes(board_id, user_id, payload) -> Board:
+    """Any member can edit the shared notes; they are sanitised like card descriptions."""
+    require_member(board_id, user_id)
+    data = BoardNotesSchema().load(payload or {})
+    safe, text = clean_description(data["notes"])
+    if text and len(text) > MAX_NOTES_TEXT:
+        raise AppError(f"notes: Longer than maximum length {MAX_NOTES_TEXT}.", 400)
+    board = get_board_or_404(board_id)
+    board.notes, board.notes_text = safe, text
+    db.session.commit()
+    return board
+
+
+def list_links(board_id, user_id) -> list[BoardLink]:
+    require_member(board_id, user_id)
+    return db.session.execute(
+        select(BoardLink).where(BoardLink.board_id == board_id)
+        .options(selectinload(BoardLink.author)).order_by(BoardLink.created_at)
+    ).scalars().all()
+
+
+def add_link(board_id, user_id, payload) -> BoardLink:
+    require_member(board_id, user_id)
+    data = BoardLinkCreateSchema().load(payload or {})
+    count = db.session.execute(select(func.count(BoardLink.id)).where(BoardLink.board_id == board_id)).scalar_one()
+    if count >= MAX_LINKS_PER_BOARD:
+        raise AppError(f"A board can have at most {MAX_LINKS_PER_BOARD} links", 400)
+    title = data.get("title") or urlsplit(data["url"]).netloc
+    link = BoardLink(board_id=board_id, created_by=user_id, title=title[:120], url=data["url"])
+    db.session.add(link)
+    db.session.commit()
+    return link
+
+
+def delete_link(link_id, user_id) -> None:
+    link = db.session.get(BoardLink, link_id)
+    if link is None:
+        raise AppError("Link not found", 404)
+    membership = require_member(link.board_id, user_id)
+    if link.created_by != user_id and membership.role != "admin":
+        raise AppError("Only the person who added this link or a board admin can remove it", 403)
+    db.session.delete(link)
     db.session.commit()

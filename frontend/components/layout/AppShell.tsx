@@ -60,7 +60,7 @@ export function AppShell({ boards: serverBoards, children }: { boards: Board[]; 
 }
 
 /** Page header: the Top_Bar with the page's single <h1>. */
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   const { openDrawer } = useShell();
   return (
     <TopBar
@@ -69,7 +69,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
       title={
         <div className="min-w-0">
           <h1 className="truncate text-2xl leading-tight md:text-[clamp(1.5rem,1.2rem+0.8vw,2.25rem)]">{title}</h1>
-          {subtitle && <p className="truncate text-sm text-muted">{subtitle}</p>}
+          {subtitle && <div className="min-w-0 truncate text-sm text-muted">{subtitle}</div>}
         </div>
       }
     />

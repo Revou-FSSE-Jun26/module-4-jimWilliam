@@ -5,7 +5,8 @@ from app.common.media_urls import signed_url, user_brief
 
 class AttachmentSchema(Schema):
     id = fields.UUID()
-    card_id = fields.UUID()
+    card_id = fields.UUID(allow_none=True)
+    board_id = fields.UUID(allow_none=True)
     filename = fields.String()
     content_type = fields.String()
     width = fields.Integer()

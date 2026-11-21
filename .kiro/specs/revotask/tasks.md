@@ -749,6 +749,35 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
   - [x] 26.5 Refresh the Tide_Clock's assigned count after each navigation
     - _Requirements: 45.4_
 
+- [x] 27. Board purpose, colour, columns, notes, links, photos and the brand mark (refinement round v4)
+  - [x] 27.1 Migration: board purpose, color_hue (checked), notes; board_links; media.board_id and kind 'board'
+    - _Requirements: 47.1, 47.4, 48.1_
+
+  - [x] 27.2 Extend B3 and B6; add notes (B36), links (B37–B39) and photos (B40–B41); board photos removable through B34
+    - _Requirements: 47.1, 47.2, 47.4, 47.5, 48.1_
+
+  - [x] 27.3 Write backend tests and properties
+    - **Property 50: Board links are web links only**
+    - **Property 51: Board colour is a hue or nothing**
+    - **Validates: Requirements 47.4, 48.1**
+
+  - [x] 27.4 Build BoardSettings (general and appearance, ColumnManager, danger zone) and BoardColorPicker
+    - _Requirements: 47.2, 48.2, 49.1, 49.2, 49.3, 49.4, 49.5_
+
+  - [x] 27.5 Build BoardBrief (About: purpose, notes, links, photos) and generalise the image gallery
+    - _Requirements: 47.3, 47.4, 47.5_
+
+  - [x] 27.6 Show purpose and colour on the board page, the dashboard and the Nav_Tree; add purpose and colour to New board
+    - _Requirements: 47.1, 47.3, 48.3_
+
+  - [x] 27.7 Use the logo as the favicon, app icons and in-page brand mark
+    - _Requirements: 50.1, 50.2_
+
+  - [x] 27.8 Write frontend and end-to-end tests
+    - **Property 52: Renumbering keeps the order and makes orders distinct**
+    - `__tests__/board-settings.test.tsx`, `e2e/board-brief.spec.ts`
+    - **Validates: Requirements 49.2**
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
@@ -793,7 +822,10 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 24, "tasks": ["25.2", "25.3", "25.5"]},
     {"id": 25, "tasks": ["25.6", "26.1", "26.2", "26.5"]},
     {"id": 26, "tasks": ["26.3"]},
-    {"id": 27, "tasks": ["26.4"]}
+    {"id": 27, "tasks": ["26.4", "27.1", "27.7"]},
+    {"id": 28, "tasks": ["27.2"]},
+    {"id": 29, "tasks": ["27.3", "27.4", "27.5", "27.6"]},
+    {"id": 30, "tasks": ["27.8"]}
   ]
 }
 ```

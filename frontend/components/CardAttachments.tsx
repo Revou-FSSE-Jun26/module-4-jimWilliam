@@ -14,17 +14,33 @@ import { ACCEPTED_IMAGES, formatBytes, imageFileError, uploadImage } from "@/lib
 
 export const MAX_ATTACHMENTS = 10;
 
+export interface ImageGalleryProps {
+  /** GET lists the images; POST uploads one (multipart field `file`). */
+  path: string;
+  max: number;
+  heading: string;
+  /** What one owner is called in the limit message, e.g. "card" or "board". */
+  owner: string;
+  role: Role;
+  onCountChange?: (count: number) => void;
+}
+
 export interface CardAttachmentsProps {
   cardId: string;
   role: Role;
   onCountChange?: (count: number) => void;
 }
 
-/**
- * Image attachments on a card (R42). Images are converted to AVIF by the API; thumbnails open a
- * protected full-size view. The uploader or a board admin can remove an image.
- */
+/** Image attachments on a card (R42). */
 export function CardAttachments({ cardId, role, onCountChange }: CardAttachmentsProps) {
+  return <ImageGallery path={`/api/cards/${cardId}/attachments`} max={MAX_ATTACHMENTS} heading="Images" owner="card" role={role} onCountChange={onCountChange} />;
+}
+
+/**
+ * An image gallery for a card or a board (R42, R47). Images are converted to AVIF by the API;
+ * thumbnails open a protected full-size view. The uploader or a board admin can remove an image.
+ */
+export function ImageGallery({ path, max, heading, owner, role, onCountChange }: ImageGalleryProps) {
   const { token, user } = useAuth();
   const handleError = useErrorHandler();
   const headingId = useId();
@@ -37,13 +53,13 @@ export function CardAttachments({ cardId, role, onCountChange }: CardAttachments
 
   useEffect(() => {
     let cancelled = false;
-    apiClient<Attachment[]>(`/api/cards/${cardId}/attachments`, { token })
+    apiClient<Attachment[]>(path, { token })
       .then((list) => !cancelled && setItems(list))
       .catch((err) => !cancelled && handleError(err));
     return () => {
       cancelled = true;
     };
-  }, [cardId, token, handleError]);
+  }, [path, token, handleError]);
 
   function update(next: Attachment[]) {
     setItems(next);
@@ -52,8 +68,8 @@ export function CardAttachments({ cardId, role, onCountChange }: CardAttachments
 
   async function upload(files: File[]) {
     let list = items ?? [];
-    const room = MAX_ATTACHMENTS - list.length;
-    if (files.length > room) notify.error(`A card can have at most ${MAX_ATTACHMENTS} images.`);
+    const room = max - list.length;
+    if (files.length > room) notify.error(`A ${owner} can have at most ${max} images.`);
     for (const file of files.slice(0, Math.max(0, room))) {
       const problem = imageFileError(file);
       if (problem) {
@@ -62,7 +78,7 @@ export function CardAttachments({ cardId, role, onCountChange }: CardAttachments
       }
       setUploading((n) => n + 1);
       try {
-        const created = await uploadImage<Attachment>(`/api/cards/${cardId}/attachments`, file, token);
+        const created = await uploadImage<Attachment>(path, file, token);
         list = [...list, created];
         update(list);
       } catch (err) {
@@ -99,7 +115,7 @@ export function CardAttachments({ cardId, role, onCountChange }: CardAttachments
   }
 
   const count = items?.length ?? 0;
-  const full = count >= MAX_ATTACHMENTS;
+  const full = count >= max;
 
   return (
     <section
@@ -116,7 +132,7 @@ export function CardAttachments({ cardId, role, onCountChange }: CardAttachments
     >
       <div className="flex flex-wrap items-center gap-2">
         <h3 id={headingId} className="text-base font-semibold">
-          Images <span className="text-sm font-normal text-muted tabular-nums">{items ? `${count} of ${MAX_ATTACHMENTS}` : ""}</span>
+          {heading} <span className="text-sm font-normal text-muted tabular-nums">{items ? `${count} of ${max}` : ""}</span>
         </h3>
         <input ref={inputRef} type="file" accept={ACCEPTED_IMAGES} multiple onChange={choose} className="visually-hidden" tabIndex={-1} aria-hidden="true" data-testid="attachment-input" />
         <BaseButton

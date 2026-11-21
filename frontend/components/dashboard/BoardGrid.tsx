@@ -8,10 +8,12 @@ import { Field } from "@/components/forms/Field";
 import { BaseBadge } from "@/components/shared/BaseBadge";
 import { BaseButton } from "@/components/shared/BaseButton";
 import { BaseModal } from "@/components/shared/BaseModal";
+import { BoardColorPicker } from "@/components/shared/BoardColorPicker";
 import { useAuth } from "@/context/AuthContext";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useSpecularHighlight } from "@/hooks/useSpecularHighlight";
 import { apiClient } from "@/lib/apiClient";
+import { BOARD_COLORS, boardHue } from "@/lib/boardColor";
 import { notify } from "@/lib/toast";
 import type { Board } from "@/lib/types";
 
@@ -28,6 +30,8 @@ export function BoardGrid({ initialBoards }: { initialBoards: Board[] }) {
   const [boards, setBoards] = useState(initialBoards);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [hue, setHue] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
 
   async function create(event: FormEvent) {
@@ -35,9 +39,15 @@ export function BoardGrid({ initialBoards }: { initialBoards: Board[] }) {
     if (!name.trim()) return;
     setPending(true);
     try {
-      const board = await apiClient<Board>("/api/boards", { method: "POST", token, body: { name: name.trim() } });
+      const board = await apiClient<Board>("/api/boards", {
+        method: "POST",
+        token,
+        body: { name: name.trim(), purpose: purpose.trim() || null, color_hue: hue },
+      });
       setBoards((list) => [board, ...list]);
       setName("");
+      setPurpose("");
+      setHue(null);
       setOpen(false);
       notify.success(`Board "${board.name}" created`);
       router.refresh(); // updates the Boards group in the Nav_Tree
@@ -52,6 +62,20 @@ export function BoardGrid({ initialBoards }: { initialBoards: Board[] }) {
     <BaseModal open={open} title="New board" onClose={() => setOpen(false)}>
       <form onSubmit={create} className="grid gap-4">
         <Field label="Board name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} data-autofocus required />
+        <div className="grid gap-1.5">
+          <label htmlFor="new-board-purpose" className="text-sm font-medium">Purpose <span className="font-normal text-muted">(optional)</span></label>
+          <textarea
+            id="new-board-purpose"
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+            maxLength={280}
+            rows={2}
+            placeholder="What should this board achieve? For example: Launch the new site by 12 December"
+            className="field-input min-h-0! py-2.5!"
+          />
+        </div>
+        {/* A new board has no id yet, so "Automatic" previews the first palette colour. */}
+        <BoardColorPicker value={hue} onChange={setHue} autoHue={BOARD_COLORS[3].hue} />
         <BaseButton type="submit" loading={pending} loadingLabel="Creating…" disabled={!name.trim()}>Create board</BaseButton>
       </form>
     </BaseModal>
@@ -89,12 +113,15 @@ export function BoardGrid({ initialBoards }: { initialBoards: Board[] }) {
             <Link
               href={`/boards/${board.id}`}
               onPointerMove={onPointerMove}
-              className="glass-pane lift specular flex h-full min-h-40 flex-col gap-3 rounded-pane p-5 text-foam no-underline"
+              className="board-tile glass-pane lift specular flex h-full min-h-40 flex-col gap-3 rounded-pane p-5 text-foam no-underline"
+              style={{ ["--board-hue" as string]: boardHue(board) }}
             >
               <span className="flex items-start gap-3">
+                <span className="board-dot mt-2.5 size-3! shrink-0" aria-hidden="true" />
                 <span className="min-w-0 flex-1 font-display text-xl font-semibold leading-snug [overflow-wrap:anywhere]">{board.name}</span>
                 <BaseBadge color={board.role === "admin" ? "info" : "neutral"}>{board.role === "admin" ? "Admin" : "Member"}</BaseBadge>
               </span>
+              {board.purpose && <span className="line-clamp-2 text-sm text-muted [overflow-wrap:anywhere]">{board.purpose}</span>}
               <span className="mt-auto flex flex-wrap gap-2 text-sm text-muted">
                 <span className="rounded-pill border border-rim px-2.5 py-0.5">{plural(board.card_count ?? 0, "open card")}</span>
                 <span className="rounded-pill border border-rim px-2.5 py-0.5">{plural(board.member_count ?? 1, "member")}</span>

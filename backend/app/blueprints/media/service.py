@@ -3,7 +3,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 from werkzeug.datastructures import FileStorage
 
-from app.common.access import get_live_card_or_404, require_member
+from app.common.access import get_board_or_404, get_live_card_or_404, require_member
 from app.common.errors import AppError
 from app.common.images import attachment_avif, avatar_avif, avif_filename
 from app.common.media_urls import verify
@@ -11,6 +11,7 @@ from app.extensions import db
 from app.models import Media, User
 
 MAX_ATTACHMENTS_PER_CARD = 10
+MAX_PHOTOS_PER_BOARD = 30
 
 
 def _read_upload(file: FileStorage | None) -> bytes:
@@ -87,9 +88,10 @@ def add_attachment(card_id, user_id, file: FileStorage | None) -> Media:
 
 
 def delete_attachment(attachment_id, user_id) -> None:
+    """Card images and board photos alike: the uploader or a board admin may remove them."""
     media = _get_media_or_404(attachment_id)
-    card = get_live_card_or_404(media.card_id)
-    membership = require_member(card.column.board_id, user_id)
+    board_id = media.board_id if media.kind == "board" else get_live_card_or_404(media.card_id).column.board_id
+    membership = require_member(board_id, user_id)
     if media.owner_id != user_id and membership.role != "admin":
         raise AppError("Only the uploader or a board admin can remove this image", 403)
     db.session.delete(media)
@@ -98,8 +100,34 @@ def delete_attachment(attachment_id, user_id) -> None:
 
 def _get_media_or_404(media_id) -> Media:
     media = db.session.get(Media, media_id)
-    if media is None or media.kind != "attachment":
+    if media is None or media.kind not in ("attachment", "board"):
         raise AppError("Attachment not found", 404)
+    return media
+
+
+# ----- board photos (R47) -----------------------------------------------------------------------
+
+def list_board_photos(board_id, user_id) -> list[Media]:
+    require_member(board_id, user_id)
+    return db.session.execute(
+        select(Media).where(Media.board_id == board_id, Media.kind == "board")
+        .options(selectinload(Media.owner)).order_by(Media.created_at)
+    ).scalars().all()
+
+
+def add_board_photo(board_id, user_id, file: FileStorage | None) -> Media:
+    require_member(board_id, user_id)
+    get_board_or_404(board_id)
+    count = db.session.execute(
+        select(func.count(Media.id)).where(Media.board_id == board_id, Media.kind == "board")
+    ).scalar()
+    if count >= MAX_PHOTOS_PER_BOARD:
+        raise AppError(f"A board can have at most {MAX_PHOTOS_PER_BOARD} photos", 400)
+    full, thumb = attachment_avif(_read_upload(file))
+    media = Media(kind="board", owner_id=user_id, board_id=board_id, filename=avif_filename(file.filename),
+                  width=full.width, height=full.height, byte_size=len(full.data), data=full.data, thumb=thumb.data)
+    db.session.add(media)
+    db.session.commit()
     return media
 
 

@@ -92,6 +92,8 @@ async function checkLayout(page: Page, where: string) {
 
 for (const theme of THEMES) {
   test(`signed-in pages: layout at 7 widths and axe scan (${theme})`, async ({ browser }) => {
+    // 6 pages x 7 widths plus an axe scan per page: up to ~50 s alone, more beside other workers.
+    test.slow();
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     await prepare(context, theme);
     const page = await context.newPage();

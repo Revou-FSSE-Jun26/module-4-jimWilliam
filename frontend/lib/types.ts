@@ -56,6 +56,10 @@ export interface Column {
 export interface Board {
   id: string;
   name: string;
+  /** The board's goal, shown to every member (R47). */
+  purpose?: string | null;
+  /** 0-359, or null for the colour derived from the id (R48). */
+  color_hue?: number | null;
   created_by: string | null;
   role: Role;
   member_count?: number;
@@ -68,6 +72,18 @@ export interface Board {
 
 export interface BoardDetail extends Board {
   columns: (Column & { cards: Card[] })[];
+  /** Shared notes as sanitised HTML, e.g. meeting notes (R47). */
+  notes?: string | null;
+}
+
+/** A link pinned to a board: a recording, a document, a design file (R47). */
+export interface BoardLink {
+  id: string;
+  board_id: string;
+  title: string;
+  url: string;
+  created_by: UserBrief | null;
+  created_at: string;
 }
 
 export interface Member {
@@ -115,7 +131,8 @@ export interface Analytics {
 /** An image attached to a card, stored as AVIF (R42). */
 export interface Attachment {
   id: string;
-  card_id: string;
+  card_id: string | null;
+  board_id?: string | null;
   filename: string;
   content_type: string;
   width: number;

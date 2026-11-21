@@ -36,6 +36,10 @@ class Board(db.Model):
     __tablename__ = "boards"
     id = _id()
     name = db.Column(db.String(120), nullable=False)
+    purpose = db.Column(db.String(280), nullable=True)         # the board's goal, shown to every member (R47)
+    color_hue = db.Column(db.Integer, nullable=True)           # 0-359; null = derived from the id (R48)
+    notes = db.Column(db.Text, nullable=True)                  # sanitised HTML, e.g. meeting notes (R47)
+    notes_text = db.Column(db.Text, nullable=True)
     created_by = db.Column(db.Uuid, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = _created()
     updated_at = _updated()
@@ -45,6 +49,8 @@ class Board(db.Model):
         cascade="all, delete-orphan", passive_deletes=True,
     )
     members = db.relationship("BoardMember", back_populates="board", cascade="all, delete-orphan", passive_deletes=True)
+
+    __table_args__ = (db.CheckConstraint("color_hue IS NULL OR (color_hue >= 0 AND color_hue <= 359)", name="color_hue_range"),)
 
 
 class BoardMember(db.Model):
@@ -135,6 +141,7 @@ class Media(db.Model):
     kind = db.Column(db.String(12), nullable=False)
     owner_id = db.Column(db.Uuid, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     card_id = db.Column(db.Uuid, db.ForeignKey("cards.id", ondelete="CASCADE"), nullable=True, index=True)
+    board_id = db.Column(db.Uuid, db.ForeignKey("boards.id", ondelete="CASCADE"), nullable=True, index=True)
     filename = db.Column(db.String(255), nullable=False)
     content_type = db.Column(db.String(50), nullable=False, default="image/avif")
     width = db.Column(db.Integer, nullable=False)
@@ -148,7 +155,21 @@ class Media(db.Model):
 
     owner = db.relationship("User", foreign_keys=[owner_id])
 
-    __table_args__ = (db.CheckConstraint("kind IN ('avatar', 'attachment')", name="kind_valid"),)
+    __table_args__ = (db.CheckConstraint("kind IN ('avatar', 'attachment', 'board')", name="kind_valid"),)
+
+
+class BoardLink(db.Model):
+    """A link pinned to a board: a meeting recording, a document, a design file (R47)."""
+    __tablename__ = "board_links"
+    id = _id()
+    board_id = db.Column(db.Uuid, db.ForeignKey("boards.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by = db.Column(db.Uuid, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    title = db.Column(db.String(120), nullable=False)
+    url = db.Column(db.String(2048), nullable=False)
+    created_at = _created()
+    updated_at = _updated()
+
+    author = db.relationship("User")
 
 
 def live_cards():
@@ -156,4 +177,4 @@ def live_cards():
     return select(Card).where(Card.deleted_at.is_(None))
 
 
-__all__ = ["User", "Board", "BoardMember", "Column", "Card", "Comment", "Notification", "Media", "live_cards"]
+__all__ = ["User", "Board", "BoardMember", "Column", "Card", "Comment", "Notification", "Media", "BoardLink", "live_cards"]

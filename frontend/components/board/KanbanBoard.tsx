@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { AnalyticsPanel } from "@/components/board/AnalyticsPanel";
+import { BoardBrief } from "@/components/board/BoardBrief";
+import { BoardSettings } from "@/components/board/BoardSettings";
 import { ColumnView } from "@/components/board/ColumnView";
 import { KanbanNavigator } from "@/components/board/KanbanNavigator";
 import { MembersPanel } from "@/components/board/MembersPanel";
@@ -17,6 +19,7 @@ import { useDragAndDrop, type BoardColumn } from "@/hooks/useDragAndDrop";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { apiClient } from "@/lib/apiClient";
 import { sortBoard } from "@/lib/board";
+import { boardHue } from "@/lib/boardColor";
 import { columnStats } from "@/lib/progress";
 import { notify } from "@/lib/toast";
 import type { BoardDetail, Card, Column } from "@/lib/types";
@@ -40,6 +43,7 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [analyticsKey, setAnalyticsKey] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<BoardColumn | null>(null);
   const [newColumn, setNewColumn] = useState("");
   const isAdmin = board.role === "admin";
@@ -122,26 +126,47 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
   return (
     <>
       <PageHeader
-        title={board.name}
-        subtitle={isAdmin ? "You are an admin of this board" : "You are a member of this board"}
-        actions={
-          isAdmin && (
-            <div className="hidden items-center gap-2 sm:flex">
-              <BaseButton variant="secondary" size="sm" onClick={() => setMembersOpen(true)}>Members</BaseButton>
-              <BaseButton variant="secondary" size="sm" aria-expanded={analyticsOpen} aria-controls="analytics" onClick={() => setAnalyticsOpen((o) => !o)}>Analytics</BaseButton>
-              <BaseButton variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>Settings</BaseButton>
-            </div>
+        title={
+          <span className="inline-flex min-w-0 max-w-full items-center gap-2.5">
+            <span className="board-dot size-3! shrink-0" style={{ ["--board-hue" as string]: boardHue(board) }} aria-hidden="true" />
+            <span className="truncate">{board.name}</span>
+          </span>
+        }
+        subtitle={
+          board.purpose ? (
+            <button type="button" onClick={() => setBriefOpen(true)} className="board-purpose" title={board.purpose}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /></svg>
+              <span className="visually-hidden">Purpose: </span>
+              <span className="truncate">{board.purpose}</span>
+            </button>
+          ) : (
+            isAdmin ? "You are an admin of this board" : "You are a member of this board"
           )
+        }
+        actions={
+          <div className="hidden items-center gap-2 sm:flex">
+            <BaseButton variant="secondary" size="sm" onClick={() => setBriefOpen(true)}>About</BaseButton>
+            {isAdmin && (
+              <>
+                <BaseButton variant="secondary" size="sm" onClick={() => setMembersOpen(true)}>Members</BaseButton>
+                <BaseButton variant="secondary" size="sm" aria-expanded={analyticsOpen} aria-controls="analytics" onClick={() => setAnalyticsOpen((o) => !o)}>Analytics</BaseButton>
+                <BaseButton variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>Settings</BaseButton>
+              </>
+            )}
+          </div>
         }
       />
 
-      {isAdmin && (
-        <div className="mt-3 flex gap-2 sm:hidden">
-          <BaseButton variant="secondary" size="sm" onClick={() => setMembersOpen(true)}>Members</BaseButton>
-          <BaseButton variant="secondary" size="sm" aria-expanded={analyticsOpen} aria-controls="analytics" onClick={() => setAnalyticsOpen((o) => !o)}>Analytics</BaseButton>
-          <BaseButton variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>Settings</BaseButton>
-        </div>
-      )}
+      <div className="mt-3 flex flex-wrap gap-2 sm:hidden">
+        <BaseButton variant="secondary" size="sm" onClick={() => setBriefOpen(true)}>About</BaseButton>
+        {isAdmin && (
+          <>
+            <BaseButton variant="secondary" size="sm" onClick={() => setMembersOpen(true)}>Members</BaseButton>
+            <BaseButton variant="secondary" size="sm" aria-expanded={analyticsOpen} aria-controls="analytics" onClick={() => setAnalyticsOpen((o) => !o)}>Analytics</BaseButton>
+            <BaseButton variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>Settings</BaseButton>
+          </>
+        )}
+      </div>
 
       {isAdmin && (
         <section id="analytics" aria-label="Board analytics" hidden={!analyticsOpen} className="glass-pane enter mt-4 scroll-mt-24 rounded-pane p-4 md:p-5">
@@ -182,6 +207,14 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
       <KanbanNavigator rowRef={rowRef} columns={navColumns} />
       </div>
 
+      <BoardBrief
+        open={briefOpen}
+        board={board}
+        onClose={() => setBriefOpen(false)}
+        onNotesSaved={(notes) => setBoard((b) => ({ ...b, notes }))}
+        onEditSettings={isAdmin ? () => { setBriefOpen(false); setSettingsOpen(true); } : undefined}
+      />
+
       <CardDetailModal card={openCard} boardId={board.id} role={board.role} onClose={closeCard} onUpdated={updateCard} onDeleted={deleteCard} />
 
       <ColumnSettings
@@ -198,8 +231,10 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
           <BoardSettings
             open={settingsOpen}
             board={board}
+            columns={columns}
             onClose={() => setSettingsOpen(false)}
-            onRenamed={(name) => { setBoard((b) => ({ ...b, name })); router.refresh(); }}
+            onSaved={(patch) => { setBoard((b) => ({ ...b, ...patch })); router.refresh(); }}
+            onColumnsChange={setColumns}
             onDeleted={() => { notify.success("Board deleted"); router.replace("/"); router.refresh(); }}
           />
         </>
@@ -253,52 +288,6 @@ function ColumnSettings({ column, onClose, onRenamed, onDeleted }: {
             </BaseButton>
           ) : (
             <BaseButton variant="ghost" className="text-danger-text" onClick={() => setConfirm(true)}>Delete…</BaseButton>
-          )}
-        </div>
-      </form>
-    </BaseModal>
-  );
-}
-
-function BoardSettings({ open, board, onClose, onRenamed, onDeleted }: {
-  open: boolean; board: BoardDetail; onClose: () => void; onRenamed: (name: string) => void; onDeleted: () => void;
-}) {
-  const { token } = useAuth();
-  const handleError = useErrorHandler();
-  const [name, setName] = useState(board.name);
-  const [confirm, setConfirm] = useState(false);
-
-  async function rename(event: FormEvent) {
-    event.preventDefault();
-    try {
-      const updated = await apiClient<{ name: string }>(`/api/boards/${board.id}`, { method: "PATCH", token, body: { name: name.trim() } });
-      onRenamed(updated.name);
-      notify.success("Board renamed");
-      onClose();
-    } catch (err) {
-      handleError(err);
-    }
-  }
-
-  async function remove() {
-    try {
-      await apiClient(`/api/boards/${board.id}`, { method: "DELETE", token });
-      onDeleted();
-    } catch (err) {
-      handleError(err);
-    }
-  }
-
-  return (
-    <BaseModal open={open} title="Board settings" onClose={onClose}>
-      <form onSubmit={rename} className="grid gap-4">
-        <Field label="Board name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} data-autofocus />
-        <div className="flex flex-wrap gap-2">
-          <BaseButton type="submit" disabled={!name.trim() || name.trim() === board.name}>Rename board</BaseButton>
-          {confirm ? (
-            <BaseButton variant="destructive" onClick={() => void remove()}>Delete board permanently</BaseButton>
-          ) : (
-            <BaseButton variant="ghost" className="text-danger-text" onClick={() => setConfirm(true)}>Delete board…</BaseButton>
           )}
         </div>
       </form>

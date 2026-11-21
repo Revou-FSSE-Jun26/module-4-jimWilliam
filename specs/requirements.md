@@ -657,3 +657,47 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 3. THE progress SHALL be exposed to assistive technology through `aria-describedby` (for example "33% done: 4 of 12 cards in the last column") while the link's accessible name stays the Board name.
 4. WHEN Cards are moved, added or deleted on the open Board, THE Nav_Tree's progress for that Board SHALL update without a reload.
 5. THE liquid SHALL rise and fall with a 700 ms transition, its wave SHALL drift only when reduced motion is not requested, and it SHALL be hidden in forced-colors mode.
+
+### Requirement 47: Board purpose, notes, links and photos
+
+**User Story:** As a Board_Member, I want the board to say what it is for and to keep its meeting notes, recordings and photos, so that the team remembers the goal and finds the context in one place.
+
+#### Acceptance Criteria
+
+1. THE "New board" form SHALL accept an optional purpose of up to 280 characters, and THE Backend SHALL store it trimmed, with a blank purpose stored as null.
+2. WHEN a Board_Admin changes the purpose in Board settings, THE Backend SHALL store it; THE Backend SHALL reject a purpose longer than 280 characters with status 400 and a change by a non-admin with status 403.
+3. THE board page SHALL show the purpose under the board title for every member, and activating it SHALL open "About this board"; THE dashboard tile SHALL show the purpose on up to two lines.
+4. "About this board" SHALL show the purpose, shared notes, links and photos to every Board_Member. Members SHALL edit the notes in the rich-text editor (sanitised as in R40), add links (http or https only; the title defaults to the host) and add photos (AVIF, as in R42, up to 30 per board).
+5. THE person who added a link or photo, or a Board_Admin, SHALL be able to remove it; others SHALL receive status 403. Deleting a board SHALL delete its links and photos.
+6. Recordings and documents SHALL be added as links, not uploads: the API's 4 MB request limit on Vercel and storing media in PostgreSQL make large files unsuitable.
+
+### Requirement 48: Board colour
+
+**User Story:** As a Board_Admin, I want to pick a colour for the board, so that I can tell my boards apart at a glance.
+
+#### Acceptance Criteria
+
+1. THE Backend SHALL store an optional `color_hue` from 0 to 359 for each Board, reject other values (including non-integers) with status 400, and accept null to return to the automatic colour.
+2. THE "New board" form and Board settings SHALL offer the colour as a radio group of eight named colours plus "Automatic" (the hue derived from the Board id).
+3. THE Board colour SHALL be used for the Nav_Tree dot and progress liquid (R46), the dot before the board title, and a wash on the dashboard tile.
+
+### Requirement 49: Managing columns from Board settings
+
+**User Story:** As a Board_Admin, I want to manage the board's columns in one place, so that I can add a stage such as "Ideas" before "To do" or reorder the workflow.
+
+#### Acceptance Criteria
+
+1. Board settings SHALL list the Columns in order with their card counts, and let the admin rename a Column in place (Enter or leaving the field saves; Escape undoes without closing the dialog).
+2. Board settings SHALL let the admin move a Column one place left or right, sending one reorder request with distinct, increasing orders for the whole sequence.
+3. Board settings SHALL let the admin add a Column at the start, after any Column, or at the end.
+4. WHEN the admin deletes a Column from Board settings, THE Frontend SHALL first ask for confirmation naming the number of cards that will be deleted.
+5. Changes made in Board settings SHALL appear on the Kanban at once, without a reload.
+
+### Requirement 50: Brand mark
+
+**User Story:** As a User, I want the same RevoTask mark in the browser tab, the app and the README, so that the product is recognisable.
+
+#### Acceptance Criteria
+
+1. THE Frontend SHALL use the RevoTask mark from `docs/assets/logo.svg` as `app/icon.svg`, a 16/32/48 px `favicon.ico` and a 180 px `apple-icon.png`.
+2. THE Sidebar and Nav_Drawer brand and the auth pages SHALL show the same mark as an inline SVG next to the "RevoTask" name, hidden from assistive technology because the name is next to it.

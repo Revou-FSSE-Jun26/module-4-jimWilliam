@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ViewTransition, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 
-import { avatarHue } from "@/lib/avatar";
+import { boardHue } from "@/lib/boardColor";
 import { boardProgress, progressLabel } from "@/lib/progress";
 import { positionFallback } from "@/lib/polyfills";
 import type { Board } from "@/lib/types";
@@ -198,7 +198,8 @@ export function NavTree({ boards, shell, onNavigate }: { boards: Board[]; shell:
                     aria-current={current ? "page" : undefined}
                     aria-describedby={progress ? descId : undefined}
                     onClick={navigate}
-                    style={{ ["--board-hue" as string]: avatarHue(board.id), ["--progress" as string]: progress ? progress.ratio.toFixed(3) : 0 }}
+                    title={board.purpose ?? undefined}
+                    style={{ ["--board-hue" as string]: boardHue(board), ["--progress" as string]: progress ? progress.ratio.toFixed(3) : 0 }}
                   >
                     {current && <CurrentPill shell={shell} />}
                     {progress && <Liquid ratio={progress.ratio} />}

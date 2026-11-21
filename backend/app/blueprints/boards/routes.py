@@ -2,7 +2,7 @@ from flask import request
 from flask_jwt_extended import jwt_required
 
 from app.blueprints.boards import bp, service
-from app.blueprints.boards.schema import BoardDetailSchema, BoardSchema, MemberSchema
+from app.blueprints.boards.schema import BoardDetailSchema, BoardLinkSchema, BoardSchema, MemberSchema
 from app.common.envelope import ok
 from app.common.utils import current_user_id
 
@@ -58,3 +58,29 @@ def add_member(board_id):
 def remove_member(board_id, user_id):
     service.remove_member(board_id, current_user_id(), user_id)
     return ok({"user_id": str(user_id)})
+
+
+@bp.patch("/<uuid:board_id>/notes")
+@jwt_required()
+def update_notes(board_id):
+    board = service.update_notes(board_id, current_user_id(), request.get_json(silent=True))
+    return ok({"id": str(board.id), "notes": board.notes, "updated_at": board.updated_at.isoformat()})
+
+
+@bp.get("/<uuid:board_id>/links")
+@jwt_required()
+def list_links(board_id):
+    return ok(BoardLinkSchema(many=True).dump(service.list_links(board_id, current_user_id())))
+
+
+@bp.post("/<uuid:board_id>/links")
+@jwt_required()
+def add_link(board_id):
+    return ok(BoardLinkSchema().dump(service.add_link(board_id, current_user_id(), request.get_json(silent=True))), 201)
+
+
+@bp.delete("/links/<uuid:link_id>")
+@jwt_required()
+def delete_link(link_id):
+    service.delete_link(link_id, current_user_id())
+    return ok({"id": str(link_id)})

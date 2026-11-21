@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { LogoMark } from "@/components/layout/LogoMark";
 import { NavTree } from "@/components/layout/NavTree";
 import { ProfileMenu } from "@/components/layout/ProfileMenu";
 import { TideClock } from "@/components/layout/TideClock";
@@ -12,7 +13,7 @@ import type { Board } from "@/lib/types";
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <Link href="/" className="flex items-center gap-2.5 rounded-pebble px-2 py-1 text-foam no-underline">
-      <span aria-hidden="true" className="relative inline-block size-8 shrink-0 brand-mark bg-seaglass shadow-[inset_0_1px_0_rgb(255_255_255/0.5)]" />
+      <LogoMark className="size-8 drop-shadow-[0_2px_6px_rgb(5_20_25/0.25)]" />
       <span className={`font-display text-xl font-semibold ${compact ? "rail-hide" : ""}`}>RevoTask</span>
     </Link>
   );

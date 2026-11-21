@@ -107,8 +107,20 @@ describe("dashboard (R13.2, R13.4)", () => {
     await userEvent.type(screen.getByLabelText("Board name"), "Launch");
     await userEvent.click(screen.getByRole("button", { name: "Create board" }));
     expect(await screen.findByRole("link", { name: /Launch/ })).toHaveAttribute("href", "/boards/b1");
-    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ name: "Launch" });
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ name: "Launch", purpose: null, color_hue: null });
     expect(router.refresh).toHaveBeenCalled();
+  });
+
+  it("creates a board with a purpose and a colour (R47.1, R48.2)", async () => {
+    const calls = mockApi({ "POST /api/boards": { ...board, purpose: "Ship v2", color_hue: 215 } });
+    renderWithProviders(<BoardGrid initialBoards={[]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Create your first board" }));
+    await userEvent.type(screen.getByLabelText("Board name"), "Launch");
+    await userEvent.type(screen.getByLabelText(/Purpose/), "  Ship v2 ");
+    await userEvent.click(screen.getByRole("radio", { name: "Lagoon" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create board" }));
+    expect(await screen.findByText("Ship v2")).toBeInTheDocument();
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ name: "Launch", purpose: "Ship v2", color_hue: 215 });
   });
 
   it("lists boards with their role", () => {

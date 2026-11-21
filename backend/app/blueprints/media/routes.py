@@ -29,6 +29,19 @@ def delete_attachment(attachment_id):
     return ok({"id": str(attachment_id)})
 
 
+@bp.get("/boards/<uuid:board_id>/photos")
+@jwt_required()
+def list_board_photos(board_id):
+    return ok(AttachmentSchema(many=True).dump(service.list_board_photos(board_id, current_user_id())))
+
+
+@bp.post("/boards/<uuid:board_id>/photos")
+@jwt_required()
+def add_board_photo(board_id):
+    media = service.add_board_photo(board_id, current_user_id(), request.files.get("file"))
+    return ok(AttachmentSchema().dump(media), 201)
+
+
 @bp.get("/media/<uuid:media_id>")
 def get_media(media_id):
     """No JWT: the signed URL is the credential (R43), so <img> tags on another domain can load it."""

@@ -525,6 +525,18 @@ With a photo (R41.4), the Avatar renders the AVIF through ProtectedImage inside 
 - **Live updates.** AppShell keeps the server Board list plus a map of live stats; KanbanBoard reports `columnStats(columns)` (all Cards, and the last Column's Cards when there are two or more Columns) through `useShell().reportBoardStats` whenever its columns change, so dragging a Card into the last Column raises the liquid at once.
 - **Why the last Column.** Analytics already defines "completed" as a Card in the last Column, and Column names are free text, so matching "Done" by name would miss "Shipped", "Fertig" or "Selesai". Users order their board so the last Column is the finished state.
 
+### Board settings and the board brief (R47–R49)
+
+- **Data.** `boards` gains `purpose` (String 280), `color_hue` (Integer with a `0..359` check), `notes` and `notes_text` (sanitised HTML and its plain text, through `richtext.clean_description`). `board_links` (id, board_id → boards cascade, created_by → users set null, title 120, url 2048, timestamps) is new. `media` gains `board_id` (→ boards cascade) and the kind `board` for board photos.
+- **Routes.** B6 (PATCH /api/boards/<id>, admin) accepts any of `name`, `purpose`, `color_hue` (null clears the last two; an empty body is 400). B3 accepts `purpose` and `color_hue`. New: B36 PATCH /api/boards/<id>/notes (member), B37 GET and B38 POST /api/boards/<id>/links (member), B39 DELETE /api/boards/links/<id> (creator or admin), B40 GET and B41 POST /api/boards/<id>/photos (member). Board photos are deleted through B34, which now resolves the board from either the card or the photo. B4 and B5 include `purpose` and `color_hue`; B5 includes `notes`.
+- **Links, not uploads, for recordings and documents.** The Vercel request limit (4.5 MB, 4 MB in the API) and PostgreSQL storage suit small AVIF images, not video, audio or PDFs. Links point to wherever the recording already lives (Meet, Zoom, Drive); the schema accepts only http and https URLs with a host, so `javascript:`, `data:` and `file:` links are rejected, and the frontend renders them with `target="_blank" rel="noopener noreferrer nofollow"`.
+- **Frontend.** `BoardSettings` (`components/board/BoardSettings.tsx`) has three sections: General and appearance (name, purpose textarea with a character count, `BoardColorPicker`), Columns (`ColumnManager`: inline rename, move left and right, delete with a confirmation naming the card count, add at a chosen position; a reorder sends `renumber()`, orders 1024, 2048, … for the whole sequence), and Danger zone. `BoardBrief` ("About this board") shows the purpose, a notes `RichTextEditor` with Save, the links list with an add form (a bare domain gets `https://`), and an `ImageGallery` (the card gallery, generalised by path, limit and heading). Both dialogs keep their body mounted through the closing animation and start fresh on each opening (`useOpenSession`, a session number derived during render).
+- **Purpose and colour in the UI.** The board's Top_Bar title has a colour dot, and the subtitle is the purpose (a button that opens About; the role text is shown when there is no purpose). An "About" button is shown to every member, beside the admin-only Members, Analytics and Settings. Dashboard tiles show the purpose and a radial wash of the board colour. `lib/boardColor.ts` holds the palette (Coral 30, Amber 75, Kelp 140, Sea glass 175, Lagoon 215, Deep water 255, Violet 300, Rose 350) and `boardHue(board) = color_hue ?? avatarHue(id)`; every use keeps OKLCH lightness 0.74 and chroma 0.11, so contrast does not depend on the choice.
+
+### Brand mark (R50)
+
+`components/layout/LogoMark.tsx` is the logo artwork as inline SVG with gradient ids from `useId` (the mark can appear twice on a page). `app/icon.svg` is the same file; `favicon.ico` (16, 32, 48 px) and `apple-icon.png` (180 px on the deep-water colour) were rendered from it. Next.js adds the `<link rel="icon">` tags from these files.
+
 ### Tide_Clock (R45)
 
 - `lib/tide.ts`: `tideLevel(date) = 0.5 + 0.5·cos(2π·(h − 15)/24)` (1 at 15:00, 0 at 03:00), `tideTrend` (rising from 03:00 to 15:00), `dayPart`, `clockParts` (24-hour or 12-hour with AM/PM).
@@ -808,6 +820,15 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 46.1 | B4 |
 | 46.2, 46.3, 46.5 | P3–P6 (Nav_Tree board rows) |
 | 46.4 | P4 (KanbanBoard reports stats through AppShell) |
+| 47.1 | P3 (New board form; B3) |
+| 47.2 | P4 (Board settings; B6) |
+| 47.3 | P3, P4 (tile, Top_Bar subtitle) |
+| 47.4, 47.5 | P4 (About this board; B36–B41, B34) |
+| 47.6 | — (design decision, see Board settings and the board brief) |
+| 48.1 | B3, B6 |
+| 48.2, 48.3 | P3–P6 (BoardColorPicker, Nav_Tree, tiles, Top_Bar) |
+| 49.1–49.5 | P4 (ColumnManager; calls B8–B11) |
+| 50.1, 50.2 | P1–P6 (`app/icon.svg`, `favicon.ico`, `apple-icon.png`, LogoMark) |
 
 ## Error Handling
 
@@ -1127,6 +1148,24 @@ For any Board, `done_count` in GET /api/boards equals the number of live Cards i
 For any `card_count` and `done_count` (or null), the Nav_Tree row shows a liquid exactly when `done_count` is not null and `card_count` is positive; its `--progress` equals `done_count / card_count`, and its description names both counts.
 
 **Validates: Requirements 46.2, 46.3**
+
+### Property 50: Board links are web links only
+
+For any submitted URL, POST /api/boards/<id>/links succeeds exactly when the scheme is http or https (in any case), the URL has a host and it contains no whitespace; every other URL, including `javascript:`, `data:`, `file:`, `mailto:` and scheme-less ones, is rejected with 400.
+
+**Validates: Requirements 47.4**
+
+### Property 51: Board colour is a hue or nothing
+
+For any submitted `color_hue`, the update succeeds and stores the value exactly when it is null or an integer from 0 to 359, and is rejected with 400 otherwise.
+
+**Validates: Requirements 48.1**
+
+### Property 52: Renumbering keeps the order and makes orders distinct
+
+For any sequence of distinct column ids, `renumber` returns the same ids in the same order with positive, strictly increasing orders.
+
+**Validates: Requirements 49.2**
 
 ### Property 45: Editor links use only http, https or mailto
 
