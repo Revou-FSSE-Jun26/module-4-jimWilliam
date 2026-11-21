@@ -582,10 +582,10 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - _Requirements: 25.1, 28.2, 28.3_
 
 - [ ] 19. Deployment configuration
-  - [x] 19.1 Add the Vercel and Supabase configuration for the Backend
-    - `backend/vercel.json` for the Flask app in `wsgi.py`, excluding tests, migrations and scripts from the function bundle
-    - `engine_options()` in `app/config.py`: `NullPool` and `prepare_threshold=None` for Supabase's transaction pooler (port 6543)
-    - Document running `flask db upgrade` against Supabase over port 5432 before deploying (CHANGELOG entry 20)
+  - [x] 19.1 Add the Render and Supabase configuration for the Backend
+    - `render.yaml` (web service, `rootDir: backend`, build runs migrations, Gunicorn start command, health check) and `backend/gunicorn.conf.py` (threaded workers on `$PORT`)
+    - `engine_options()` in `app/config.py`: a small recycled pool per worker for the session pooler; `NullPool` and `prepare_threshold=None` kept for the transaction pooler (port 6543)
+    - CHANGELOG entries 20 (Vercel and Supabase) and 28 (API moved to Render with Gunicorn)
     - _Requirements: 27.1, 27.2, 27.6_
 
   - [x] 19.2 Create the Postman collection
@@ -818,6 +818,66 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
   - [x] 29.2 Write the Business Requirements Document and a reusable template in `docs/brd/`; update the README
     - _Requirements: 29.1_
 
+- [ ] 30. Board tile summary, Board settings rules, column drag revert and BaseButton markers (refinement round v5)
+  - [ ] 30.1 Add `open_card_count` and `members_preview` to B4 (and to the B3 response)
+    - In `boards/service.list_boards` derive `open_card_count = card_count - (done_count or 0)` from the existing subqueries (all live Cards when the Board has fewer than two Columns; soft-deleted Cards in neither count)
+    - Add `members_preview`: at most 4 Board_Members by ascending membership creation time, each with `user_id`, `name` and `avatar_url`; keep `member_count`
+    - Extend `BoardListSchema` in `boards/schema.py`; make `create_board` return `open_card_count: 0` and the creator as the only preview entry
+    - _Requirements: 13.5, 13.7_
+
+  - [ ]* 30.2 Write property test for the board list summary
+    - **Property 57: Board list summary counts**
+    - **Validates: Requirements 13.5**
+
+  - [ ] 30.3 Build `AvatarStack` and `BoardTile`, and use them on the dashboard
+    - Create `components/board/AvatarStack.tsx` (overlapped Avatars with a surface-colour rim, "+N" chip when `total` exceeds the Avatars shown, `aria-hidden` visuals and one visually hidden "5 members" / "1 member" text) and `components/board/BoardTile.tsx` (name, role badge, "N open cards" / "1 open card")
+    - Replace the tile markup in P3 with BoardTile; add a Board created from the form from the B3 response with `open_card_count: 0`, `member_count: 1` and the signed-in User from AuthContext as `members_preview`
+    - Add `open_card_count` and `members_preview` to the `Board` type in `lib/`
+    - _Requirements: 13.5, 13.6, 13.7_
+
+  - [ ]* 30.4 Write property test for BoardTile and AvatarStack
+    - **Property 58: Board tile shows the counts and the avatar overflow**
+    - **Validates: Requirements 13.6, 13.7**
+
+  - [ ] 30.5 Check and complete the Board settings rules in `BoardSettings` and its Top_Bar control
+    - Render the Top_Bar control only when the Board `role` is `admin` (not in the DOM for a member); enable "Save changes" only while a value differs from the saved one
+    - After a successful B6 save show a success toast and call `router.refresh()` so the Top_Bar title, the Nav_Tree and the dashboard tile update without a reload
+    - "Delete board…" shows the confirmation naming the consequence, and B7 is called only from "Delete board permanently"; on success show a toast, `router.replace("/")` and `router.refresh()`
+    - On an `ApiError` from B6 or B7 show an error toast and keep the dialog open with the entered values
+    - Parts of this already exist (dirty-state save, delete confirmation); the other parts were not found in code and need confirming
+    - _Requirements: 14.7, 14.8, 14.9, 14.10, 14.11, 14.12_
+
+  - [ ]* 30.6 Write property test for Board settings visibility and dirty state
+    - **Property 59: Board settings follow role and unsaved changes**
+    - **Validates: Requirements 14.7, 14.11**
+
+  - [ ] 30.7 Make the ColumnManager drag optimistic with revert, and drag only from the grip
+    - In `ColumnManager` (`BoardSettings.tsx`) show `moveItem(columns, from, to)` through `onChange` before the B9 response, send one request with every Column id once and positive, strictly increasing orders (`renumber`), and restore the previous list with an error toast when the request fails
+    - Set `draggable` only while the grip is armed so selecting text in the rename field never starts a drag; keep the move-left and move-right buttons with names that include the Column name ("Move To do left")
+    - _Requirements: 49.8, 49.9_
+
+  - [ ]* 30.8 Write property test for the optimistic column drag
+    - **Property 60: Column drag is optimistic and reverts on failure**
+    - **Validates: Requirements 49.8**
+
+  - [ ] 30.9 Add the BaseButton and shell markers
+    - `BaseButton` stamps `data-base-button` on its `<button>`
+    - Put `data-shell-buttons` on the Nav_Tree root (`<nav aria-label="Main">`, in the Sidebar and the Nav_Drawer) and on the Profile_Menu root including the Profile_Capsule trigger
+    - _Requirements: 20.6_
+
+  - [ ] 30.10 Migrate the remaining raw `<button>` elements or document the exemption
+    - Replace the raw buttons in `KanbanNavigator`, `BoardSettings` (ColumnManager row buttons), `CardAttachments`, `NotificationBell`, `BaseModal`, `ImageLightbox` and `ProfileHero` with BaseButton (add an icon-only size or variant if needed)
+    - Where a button cannot use BaseButton, add it to the exemption in `design.md` ("BaseButton exemption") and Requirement 20.6 with the reason, and mark it with `data-shell-buttons` on its component root; do not leave an unmarked exception
+    - Re-audit P1–P6 for any other raw `<button>` (this reopens the audit of task 16.11)
+    - _Requirements: 20.6_
+
+  - [ ]* 30.11 Write property test for button markers
+    - **Property 61: Buttons come from BaseButton outside the shell menus**
+    - **Validates: Requirements 20.6**
+
+- [ ] 31. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
@@ -828,7 +888,9 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
 - The UI tasks (15.12–15.18, 16.19–16.25) follow the "UI/UX Design System" section of `design.md`; build the tokens (15.12) before any styled component.
 - The comments status tests (9.7) and the component tests (18.1, 18.2) are not optional because Requirements 24.2 and 25.2 demand them.
 - Group 23 was added in refinement round v4 (CHANGELOG entry 21) for routes B30–B35 and Requirements 40–43.
-- Tasks 19.5 and 20.4 need the live deployment, which the user performs on Vercel (frontend and API) with Supabase.
+- Group 30 was added in refinement round v5 for R13.5–R13.7, R14.7–R14.12, R49.8–R49.9 and R20.6, with Properties 57–61. Nothing in group 30 is checked because the code does not yet contain `open_card_count`, `members_preview`, `AvatarStack`, `BoardTile`, `data-base-button` or `data-shell-buttons`, and the ColumnManager drag waits for B9 before updating.
+- Task 16.11 stays checked, but its R20.6 audit is superseded by 30.9 and 30.10.
+- Tasks 19.5 and 20.4 need the live deployment, which the user performs on Render (API), Vercel (frontend) and Supabase (database).
 
 ## Task Dependency Graph
 
@@ -867,7 +929,12 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 29, "tasks": ["27.3", "27.4", "27.5", "27.6"]},
     {"id": 30, "tasks": ["27.8", "28.1", "28.5", "28.6", "28.8"]},
     {"id": 31, "tasks": ["28.2", "28.3", "28.4", "28.7"]},
-    {"id": 32, "tasks": ["28.9", "29.1", "29.2"]}
+    {"id": 32, "tasks": ["28.9", "29.1", "29.2"]},
+    {"id": 33, "tasks": ["30.1", "30.5", "30.9"]},
+    {"id": 34, "tasks": ["30.2", "30.3", "30.6", "30.7"]},
+    {"id": 35, "tasks": ["30.4", "30.8", "30.10"]},
+    {"id": 36, "tasks": ["30.11"]},
+    {"id": 37, "tasks": ["31"]}
   ]
 }
 ```

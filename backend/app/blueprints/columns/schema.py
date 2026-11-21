@@ -1,6 +1,7 @@
 from marshmallow import EXCLUDE, Schema, ValidationError, fields, pre_load, validate, validates_schema
 
 from app.blueprints.cards.schema import CardSchema
+from app.common.fields import JsonNumber
 
 
 class ColumnNameSchema(Schema):
@@ -21,7 +22,7 @@ class ColumnOrderSchema(Schema):
         unknown = EXCLUDE
 
     id = fields.UUID(required=True)
-    order = fields.Float(required=True, validate=validate.Range(min=0, min_inclusive=False))
+    order = JsonNumber(required=True, validate=validate.Range(min=0, min_inclusive=False))
 
 
 class ColumnReorderSchema(Schema):

@@ -9,12 +9,12 @@ RevoTask has two roles per Board, as defined in the project brief (`brief.md`):
 - **Board_Member**: creates and edits Columns and Cards, moves Cards, comments, and tracks assigned Cards.
 - **Board_Admin**: everything a Board_Member can do, plus managing member access, renaming and deleting the Board, and viewing analytics.
 
-The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL) deployed on Vercel as a Python function, with its PostgreSQL database on Supabase. The Frontend is a Next.js application (React, TypeScript, Tailwind CSS, react-hot-toast) deployed on Vercel.
+The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL) deployed on Render and served by Gunicorn, with its PostgreSQL database on Supabase. The Frontend is a Next.js application (React, TypeScript, Tailwind CSS, react-hot-toast) deployed on Vercel.
 
 ## Glossary
 
 - **RevoTask**: The complete system, made of the Backend and the Frontend.
-- **Backend**: The Flask REST API deployed on Vercel, using a Supabase PostgreSQL database.
+- **Backend**: The Flask REST API deployed on Render (Gunicorn), using a Supabase PostgreSQL database.
 - **Frontend**: The Next.js web application deployed on Vercel.
 - **Blueprint**: A Flask blueprint package under `app/blueprints/<name>/` containing `routes.py`, `service.py` and `schema.py`. The brief's eight Blueprints are auth, boards, columns, cards, comments, notifications, analytics and users; a ninth, media, holds card images and signed image delivery (R42, R43).
 - **Media**: An uploaded image stored by the Backend as AVIF: a User's avatar or a Card attachment.
@@ -228,6 +228,9 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 2. WHEN a User submits the create-board form with a valid name, THE Frontend SHALL call POST /api/boards and show the new Board in the list.
 3. WHEN a User selects a Board, THE Frontend SHALL navigate to /boards/[id].
 4. WHILE the User has no Boards, THE Frontend SHALL show an empty-state message.
+5. THE Backend SHALL include in each Board of GET /api/boards an `open_card_count` (the number of live Cards that are not in the Board's last Column, or all live Cards when the Board has fewer than two Columns) and a `members_preview` list of at most 4 Board_Members, each with `user_id`, `name` and `avatar_url`, ordered by ascending membership creation time, together with the existing `member_count`.
+6. THE Frontend SHALL show on each Board tile the `open_card_count` labelled "open cards" (singular "open card" for 1), and an avatar stack of the `members_preview` Avatars, overlapping, followed by a "+N" chip when `member_count` exceeds the number of Avatars shown; the stack SHALL expose the total as text such as "5 members" to assistive technology.
+7. WHEN the User creates a Board from the dashboard, THE Frontend SHALL show the new tile with an `open_card_count` of 0 and the User as the only Avatar.
 
 ### Requirement 14: Kanban board page
 
@@ -241,6 +244,12 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 4. WHEN a User selects a Card, THE Frontend SHALL open CardDetailModal for that Card.
 5. WHILE the signed-in User is a Board_Admin of the Board, THE Frontend SHALL display the analytics of the Board from GET /api/boards/<id>/analytics.
 6. WHEN a User reloads /boards/[id], THE Frontend SHALL show each Card in the Column and at the order position last persisted by the Backend.
+7. WHILE the signed-in User is a Board_Admin of the Board, THE Frontend SHALL show a Board settings control in the Top_Bar of /boards/[id] that opens Board settings in BaseModal, with the Board name field pre-populated and a "Save changes" button that is enabled only while a value differs from the saved one.
+8. WHEN a Board_Admin saves a changed Board name, THE Frontend SHALL call PATCH /api/boards/<id>, show a success toast, and update the Board title, the Nav_Tree and the dashboard tile without a manual reload.
+9. WHEN a Board_Admin activates "Delete board…" in Board settings, THE Frontend SHALL show a confirmation step that names the consequence (columns, cards, comments, notes, links and photos are removed for every member) with "Delete board permanently" and "Keep board" choices, and SHALL call DELETE /api/boards/<id> only after "Delete board permanently" is activated.
+10. WHEN DELETE /api/boards/<id> succeeds from Board settings, THE Frontend SHALL show a success toast, navigate to /, and remove the Board from the dashboard and the Nav_Tree.
+11. WHILE the signed-in User is a Board_Member who is not a Board_Admin, THE Frontend SHALL hide the Board settings control, so that no rename or delete control is shown.
+12. IF PATCH or DELETE /api/boards/<id> returns an error from Board settings, THEN THE Frontend SHALL show an error toast and keep Board settings open with the entered values.
 
 ### Requirement 15: Drag and drop
 
@@ -312,7 +321,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 3. THE BaseModal SHALL render a native `<dialog>` opened with `showModal()`, named by its visible title through `aria-labelledby`, with a close control.
 4. WHILE the `disabled` property of BaseButton is true, THE BaseButton SHALL ignore click events.
 5. THE Frontend SHALL keep BaseButton, BaseBadge and BaseModal in `components/shared/`.
-6. THE pages /my-tasks, /profile, /login, /register, / and /boards/[id] SHALL render every button through BaseButton and SHALL contain no other `<button>` element.
+6. THE pages /my-tasks, /profile, /login, /register, / and /boards/[id] SHALL render every button through BaseButton and SHALL contain no other `<button>` element, except the `<button>` elements inside the shell components Nav_Tree and Profile_Menu, which need `aria-expanded`, `aria-controls` and menu roles that BaseButton does not provide (R35.8, R36.4).
 
 ### Requirement 21: API client and error handling
 
@@ -391,12 +400,12 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 
 #### Acceptance Criteria
 
-1. THE Backend SHALL be deployed on Vercel as a Python function serving the Flask WSGI `app` from `wsgi.py`, with its database on Supabase PostgreSQL.
-2. WHEN a Backend version with schema changes is deployed, THE migrations SHALL first be applied to the Supabase database with `flask db upgrade` over the session or direct connection (port 5432).
+1. THE Backend SHALL be deployed on Render as a Python web service that runs Gunicorn (`gunicorn wsgi:app --config gunicorn.conf.py`, threaded workers bound to `$PORT`) with the health check `/api/health`, defined in `render.yaml`, and with its database on Supabase PostgreSQL.
+2. WHEN a Backend version is deployed, THE migrations SHALL be applied with `flask --app wsgi db upgrade` before the new version serves traffic: in the build command on Render's free plan, or as the pre-deploy command on a paid plan.
 3. THE deployment SHALL verify GET /api/health, POST /api/auth/register and POST /api/auth/login in Postman against the deployed API URL.
 4. THE Frontend SHALL be deployed on Vercel.
 5. WHILE the viewport is the Mobile_Viewport, THE Frontend SHALL render every page without page-level horizontal scrolling and with all controls reachable; the Kanban Columns MAY scroll horizontally inside their own container.
-6. WHILE the Backend runs on Vercel, THE Backend SHALL connect through the Supabase transaction pooler (port 6543) with prepared statements disabled and no client-side connection pool.
+6. WHILE the Backend runs on Render, THE Backend SHALL connect through the Supabase session pooler (port 5432, IPv4) with a small connection pool per Gunicorn worker (3 connections plus 2 overflow by default), checked before use and recycled every 5 minutes; IF the URL uses the transaction pooler (port 6543), THEN THE Backend SHALL disable prepared statements and client-side pooling.
 
 ### Requirement 28: Repository hygiene
 
@@ -669,7 +678,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 3. THE board page SHALL show the purpose under the board title for every member, and activating it SHALL open "About this board"; THE dashboard tile SHALL show the purpose on up to two lines.
 4. "About this board" SHALL show the purpose, shared notes, links and photos to every Board_Member. Members SHALL edit the notes in the rich-text editor (sanitised as in R40), add links (http or https only; the title defaults to the host) and add photos (AVIF, as in R42, up to 30 per board).
 5. THE person who added a link or photo, or a Board_Admin, SHALL be able to remove it; others SHALL receive status 403. Deleting a board SHALL delete its links and photos.
-6. Recordings and documents SHALL be added as links, not uploads: the API's 4 MB request limit on Vercel and storing media in PostgreSQL make large files unsuitable.
+6. Recordings and documents SHALL be added as links, not uploads: the API's 4 MB upload limit and storing media in PostgreSQL make large files unsuitable.
 
 ### Requirement 48: Board colour
 
@@ -695,6 +704,8 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 5. Changes made in Board settings SHALL appear on the Kanban at once, without a reload.
 6. Board settings SHALL also let the admin reorder Columns by dragging a row by its grip, with a drop line showing where it will land; the arrow buttons remain for keyboard users.
 7. THE Kanban SHALL end with a slim "+" tile instead of an inline form; it SHALL open an "Add a column" dialog with a name and a position, available to every Board_Member, with a link to the full manager for Board_Admins.
+8. WHEN the admin drops a dragged Column row, THE Frontend SHALL update the displayed order before the response arrives, send one PATCH /api/boards/<id>/columns/reorder request with distinct, increasing positive orders for the whole sequence, and revert the list with an error toast if the request fails.
+9. THE Column rows SHALL be draggable only from their grip, so that selecting text in the rename field never starts a drag; each row SHALL keep the move-left and move-right buttons with accessible names that include the Column name.
 
 ### Requirement 50: Brand mark
 

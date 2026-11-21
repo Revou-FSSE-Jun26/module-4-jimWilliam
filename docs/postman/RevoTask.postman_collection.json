@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "RevoTask API",
-    "description": "Verifies the deployed Flask API (R27.3): health, register, login, then one request per Blueprint. Set {{baseUrl}} in the environment to the deployed API URL (the backend Vercel project). Run the folders in order; tests store the token and ids for later requests.",
+    "description": "Verifies the deployed Flask API (R27.3): health, register, login, then one request per Blueprint. Set {{baseUrl}} in the environment to the deployed API URL (the Render web service). Run the folders in order; tests store the token and ids for later requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [

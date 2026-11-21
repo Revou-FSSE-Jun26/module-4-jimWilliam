@@ -1,10 +1,12 @@
 """p95 latency check for R30.1 (non-analytics endpoints under 500 ms at the 95th percentile).
 
 Usage:
-    python scripts/latency_check.py https://YOUR-API.vercel.app [requests_per_endpoint]
+    python scripts/latency_check.py https://YOUR-API.onrender.com [requests_per_endpoint]
 
-It registers a throwaway user, creates one board, then times GET /api/health, GET /api/boards and
-GET /api/boards/<id>. Standard library only, so it runs anywhere Python does.
+It first wakes the service (a free Render instance sleeps after 15 idle minutes and takes about a
+minute to start), so the wake-up is never counted. Then it registers a throwaway user, creates one
+board, and times GET /api/health, GET /api/boards and GET /api/boards/<id>. Standard library only,
+so it runs anywhere Python does.
 """
 import json
 import statistics
@@ -14,14 +16,14 @@ import urllib.request
 import uuid
 
 
-def call(base, method, path, token=None, body=None):
+def call(base, method, path, token=None, body=None, timeout=30):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(base + path, data=data, method=method)
     req.add_header("Content-Type", "application/json")
     if token:
         req.add_header("Authorization", f"Bearer {token}")
     started = time.perf_counter()
-    with urllib.request.urlopen(req, timeout=30) as res:
+    with urllib.request.urlopen(req, timeout=timeout) as res:
         payload = json.loads(res.read() or b"{}")
     return (time.perf_counter() - started) * 1000, payload
 
@@ -35,6 +37,8 @@ def main():
         sys.exit(__doc__)
     base = sys.argv[1].rstrip("/")
     n = int(sys.argv[2]) if len(sys.argv) > 2 else 100
+    waited, _ = call(base, "GET", "/api/health", timeout=180)   # wake a sleeping instance; not measured
+    print(f"service awake ({waited / 1000:.1f} s for the first response)")
     email = f"latency+{uuid.uuid4().hex[:10]}@revotask.test"
     call(base, "POST", "/api/auth/register", body={"name": "Latency Check", "email": email, "password": "latency-check-123"})
     _, login = call(base, "POST", "/api/auth/login", body={"email": email, "password": "latency-check-123"})

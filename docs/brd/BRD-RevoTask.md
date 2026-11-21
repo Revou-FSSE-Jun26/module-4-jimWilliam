@@ -37,7 +37,7 @@ This BRD says **what the business needs and why**. The detailed behaviour lives 
 
 Small teams keep losing track of who is doing what, what is late, and why a piece of work exists at all. RevoTask gives each team **boards** split into **columns** (stages of work) holding **cards** (tasks). Cards move between stages by drag and drop, carry a formatted description, images, comments, an assignee and a due date. Each board states its **purpose** and **deadline**, keeps shared **notes, links and photos**, and shows its **progress** as a level of liquid in the sidebar.
 
-The product was built for the RevoU FSSE Module 4 assignment with a spec-driven, AI-assisted workflow (Kiro for specs, Claude Code for review and implementation). It runs on Vercel (web app and API) with a Supabase PostgreSQL database, and has a calm "sea glass" interface that works from a 320 px phone to a 4K monitor and passes automated accessibility checks.
+The product was built for the RevoU FSSE Module 4 assignment with a spec-driven, AI-assisted workflow (Kiro for specs, Claude Code for review and implementation). It runs on Render (API, served by Gunicorn) and Vercel (web app) with a Supabase PostgreSQL database, and has a calm "sea glass" interface that works from a 320 px phone to a 4K monitor and passes automated accessibility checks.
 
 ## 2. Background and problem
 
@@ -86,9 +86,9 @@ O1-a: latency check against the live API. O1-b: Playwright run against the live 
 
 | Item | Why it is out |
 |---|---|
-| Due-date reminder notifications ("due tomorrow") | The API runs as serverless functions with no scheduler; on-time reminders need an extra service (cron or queue). |
-| Uploading recordings, videos and documents | The hosting platform limits a request to 4.5 MB and media is stored in the database; such files are pinned as links instead. |
-| Real-time collaboration (live updates without polling) | Notifications poll every 30 s, which the brief asks for; websockets are not supported by the chosen hosting. |
+| Due-date reminder notifications ("due tomorrow") | Needs a scheduled job (a Render cron job, a paid service) and an email or push channel; and the free web service sleeps when idle, so it cannot schedule its own reminders. |
+| Uploading recordings, videos and documents | Uploads are limited to 4 MB and media is stored in the database (the API's filesystem is ephemeral); such files are pinned as links instead. |
+| Real-time collaboration (live updates without polling) | Notifications poll every 30 s, which the brief asks for; live updates would need websockets and a message channel between Gunicorn workers. |
 | Card checklists, labels, recurring tasks, time tracking | Not in the brief; candidates for a later release. |
 | Email sending (invites, password reset) | No email service in the stack; members are added by an existing account's email. |
 | Native mobile apps | The responsive web app covers phones. |
@@ -176,7 +176,7 @@ Priority uses MoSCoW: **M**ust, **S**hould, **C**ould. "Source" says where the n
 | BR-27 | Specs (requirements, design, tasks) are written first, reviewed, and every change is logged with a before, an after, a reason and the prompt used. | M | Brief | R22, CHANGELOG |
 | BR-28 | Steering guidelines are committed before any code, and generated code is reviewed against them. | M | Brief | R23 |
 | BR-29 | Automated tests cover the API, the UI and full user journeys. | M | Brief | R24–R26 |
-| BR-30 | The app is deployed (web app and API on Vercel, database on Supabase) with documented steps. | M | Brief, owner | R27 |
+| BR-30 | The app is deployed (API on Render with Gunicorn, web app on Vercel, database on Supabase) with documented steps. | M | Brief, owner | R27 |
 | BR-31 | The README explains the product, the AI workflow, local setup, tests, deployment and a demo account. | M | Brief | R29 |
 
 ## 7. Non-functional requirements
@@ -191,7 +191,7 @@ Priority uses MoSCoW: **M**ust, **S**hould, **C**ould. "Source" says where the n
 | NFR-06 | Reliability | Consistent `{"data"}` / `{"error"}` response envelope; optimistic UI that reverts on failure; database changes only through migrations. | R11, R15 |
 | NFR-07 | Maintainability | Eight brief blueprints plus `media`; one file per concern; steering guidelines; specs as the source of truth. | R11, R23 |
 | NFR-08 | Quality | Every one of the 56 correctness properties in the design has an automated test. | design.md |
-| NFR-09 | Hosting limits | Request bodies at most 4 MB; serverless-friendly database pooling (transaction pooler, no prepared statements). | R27, R43 |
+| NFR-09 | Hosting limits | Uploads at most 4 MB; a small, recycled database pool per Gunicorn worker within the Supabase session pooler's limits; the free Render instance sleeps after 15 minutes idle (about a minute to wake). | R27, R43 |
 
 ## 8. Assumptions, constraints and dependencies
 
@@ -204,7 +204,7 @@ Priority uses MoSCoW: **M**ust, **S**hould, **C**ould. "Source" says where the n
 **Constraints**
 
 - Course brief: Flask API with the eight named blueprints, Next.js frontend, specs and guidelines first, AI-assisted workflow documented.
-- Hosting: Vercel for both the web app and the API (read-only filesystem, 4.5 MB request limit, no long-running processes); Supabase PostgreSQL (transaction pooler on port 6543 for the app, session or direct connection on port 5432 for migrations).
+- Hosting: Render for the API (Gunicorn web service; ephemeral filesystem; the free plan sleeps after 15 idle minutes and has no pre-deploy command), Vercel for the web app, Supabase PostgreSQL through the session pooler on port 5432 (IPv4) for the API and migrations.
 - No paid third-party services (no storage bucket, email or scheduler).
 
 **Dependencies**
@@ -216,19 +216,19 @@ Priority uses MoSCoW: **M**ust, **S**hould, **C**ould. "Source" says where the n
 
 | # | Decision | Alternatives considered | Why |
 |---|---|---|---|
-| D1 | Deploy on **Vercel and Supabase** only. | Railway (in the first spec). | Owner's choice; one platform for both apps, managed Postgres. Required serverless database settings. |
-| D2 | Store images **as AVIF in PostgreSQL**, served by **signed, expiring links**. | Local disk; object storage bucket. | Vercel's filesystem is read-only; no extra paid service; AVIF keeps rows small; `<img>` tags cannot send the login token across domains. |
+| D1 | **API on Render with Gunicorn, web app on Vercel, database on Supabase.** | Railway (first spec); everything on Vercel (an earlier decision, entry 20); Render Postgres. | Owner's choice. A long-running Gunicorn server keeps a connection pool and matches the course stack; Vercel is the natural home for Next.js; Supabase's free database does not expire (Render's free Postgres expires after 30 days). |
+| D2 | Store images **as AVIF in PostgreSQL**, served by **signed, expiring links**. | Local disk; object storage bucket. | The API's filesystem is ephemeral (reset on every deploy); no extra paid service; AVIF keeps rows small; `<img>` tags cannot send the login token across domains. |
 | D3 | **Never keep the original upload**; re-encode and strip metadata. | Store the original as well. | Owner's request; privacy (GPS) and safety (only real images stored). |
 | D4 | **Block right-click, drag and long-press saving** of images, but say plainly that this is a deterrent, not DRM. | Promise full protection. | No website can stop screenshots or developer tools; honesty avoids a false promise. |
 | D5 | **Sanitise rich text on the server** (allow-list). | Trust the editor. | The API, not the browser, is the trust boundary. |
-| D6 | **Recordings and documents as links**, not uploads. | Upload any file. | 4.5 MB request limit and database storage. |
+| D6 | **Recordings and documents as links**, not uploads. | Upload any file. | 4 MB upload limit and database storage. |
 | D7 | Board **colour keeps only the hue**; lightness and chroma are fixed. | Free colour choice. | A white or near-black choice would make dots, liquid and text unreadable. |
 | D8 | **"Done" = the last column** (same as Analytics). | A column named "Done". | Names are free text and can be in any language. |
 | D9 | The board's **"+" tile opens a small dialog** for everyone, not Board settings. | Send "+" to settings. | Settings are admin-only; members must still be able to add columns. |
 | D10 | **Remove sidebar links that repeat the board's own buttons** (Members, Analytics). | Keep both. | One way to each panel; room for progress in each row. |
 | D11 | Keep "cards assigned to you" **under the clock**. | A bubble on the profile; a count on My Tasks. | A bubble reads as a notification (confusing next to the bell); a My Tasks count would duplicate it. |
 | D12 | **Tide clock** above the profile, tied to the sidebar's wave decoration. | A clock bottom-right. | Bottom-right is where the last column and the dock are; the tide makes it part of the design. |
-| D13 | **No due-date reminders** yet. | Scheduled reminders. | No scheduler on serverless hosting without an extra service. |
+| D13 | **No due-date reminders** yet. | Scheduled reminders. | Needs a scheduled job and a delivery channel (email or push); the free web service sleeps when idle. |
 | D14 | **Quiet scrollbars**: hidden where the browser can show faded edges instead; thin scrollbar elsewhere. | Always-visible scrollbars. | Owner's request for a cleaner look, while still signalling more content. |
 
 ## 10. Owner requests and how they were resolved
@@ -266,13 +266,14 @@ Every change the owner asked for during the build, in order. "Adapted" means the
 | 27 | Slower, smoother entrances. | Done | 620 ms, 75 ms apart. | 26 |
 | 28 | "Animate background" shows no animation; turn it on by default. | Done | Motion made visible; still paused by reduced motion or the toggle. | 27 |
 | 29 | Write this BRD as a reusable document and update the README. | Done | This document and `BRD-template.md`. | 27 |
+| 30 | Use Render for the backend (keeping Gunicorn) and Vercel for the frontend instead. | Done | `render.yaml`, `gunicorn.conf.py`, session-pooler connection pool; database stays on Supabase (D1). | 28 |
 
 ## 11. Risks
 
 | ID | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
 | RK1 | Database grows with images. | Medium | Medium | AVIF, size and count limits (10 per card, 30 per board, 4 MB per upload); move to object storage if usage grows. |
-| RK2 | Serverless cold starts make the first request slow. | High | Low | Documented; latency check measures p95, not the first call. |
+| RK2 | The free Render instance sleeps after 15 idle minutes, so the first request after a pause takes about a minute. | High | Medium | Documented; the latency check warms the service first and measures p95; a paid instance (or an uptime ping) removes the sleep. |
 | RK3 | Signed image links copied and shared. | Low | Low | Links expire in 1–2 hours. |
 | RK4 | Newer browser features unsupported in some browsers. | Medium | Low | Every feature has a fallback (thin scrollbars, no fades, instant transitions). |
 | RK5 | Optimistic moves diverge from the server under poor connections. | Low | Medium | Moves revert with a toast on failure; reload shows the saved state. |
@@ -282,9 +283,9 @@ Every change the owner asked for during the build, in order. "Adapted" means the
 
 | ID | Item | Owner | Needed for |
 |---|---|---|---|
-| OI-1 | Deploy the API and web app to Vercel and the database to Supabase; run `flask db upgrade` against Supabase. | Project owner | O1 |
+| OI-1 | Create the Supabase project; deploy the API on Render from `render.yaml` (the build applies migrations) and the web app on Vercel; run `scripts/seed_demo.py` once against Supabase. | Project owner | O1 |
 | OI-2 | Run the latency check (task 19.5) and the Playwright suite (task 20.4) against the live URLs; commit the report. | Project owner | O1, O4 |
-| OI-3 | Decide on due-date reminders (needs a scheduler, e.g. Vercel Cron or Supabase scheduled functions). | Project owner | Future release |
+| OI-3 | Decide on due-date reminders (needs a scheduler, e.g. a Render cron job or Supabase scheduled functions, and an email or push channel). | Project owner | Future release |
 
 ## 13. Acceptance and sign-off
 

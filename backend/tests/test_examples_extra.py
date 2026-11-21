@@ -61,15 +61,30 @@ def test_comment_on_assigned_card_notifies_assignee_only(client, owner, member):
     assert "New comment on Write the brief" not in _messages(client, owner["headers"])
 
 
-def test_supabase_transaction_pooler_disables_prepared_statements_and_pooling():
+def test_engine_options_for_render_and_serverless_hosts():
     from sqlalchemy.pool import NullPool
 
     from app.config import _database_url, engine_options
 
     pooled = engine_options(_database_url("postgresql://postgres.ref:pw@aws-0-x.pooler.supabase.com:6543/postgres?sslmode=require"))
     assert pooled == {"poolclass": NullPool, "connect_args": {"prepare_threshold": None}}
-    direct = engine_options(_database_url("postgres://postgres.ref:pw@aws-0-x.pooler.supabase.com:5432/postgres"))
-    assert direct == {"pool_pre_ping": True}
+    # Render: a long-running Gunicorn server keeps a small, checked, recycled pool (session pooler).
+    session = engine_options(_database_url("postgres://postgres.ref:pw@aws-0-x.pooler.supabase.com:5432/postgres"))
+    assert session == {"pool_pre_ping": True, "pool_size": 3, "max_overflow": 2, "pool_recycle": 300, "pool_timeout": 10}
+    assert engine_options("sqlite:///revotask.sqlite3") == {"pool_pre_ping": True}
+
+
+def test_gunicorn_config_binds_render_port(monkeypatch):
+    import importlib.util
+    from pathlib import Path
+
+    monkeypatch.setenv("PORT", "12345")
+    monkeypatch.setenv("WEB_CONCURRENCY", "3")
+    spec = importlib.util.spec_from_file_location("gunicorn_conf", Path(__file__).resolve().parents[1] / "gunicorn.conf.py")
+    conf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(conf)
+    assert conf.bind == "0.0.0.0:12345" and conf.workers == 3
+    assert conf.worker_class == "gthread" and conf.timeout >= 30
 
 
 def test_untouched_env_example_values_fail_fast():
@@ -100,3 +115,16 @@ def test_board_list_reports_done_count_from_the_last_column(client, api):
     client.delete(f"/api/cards/{deleted['id']}", headers=headers)
     data = listed()
     assert (data["card_count"], data["done_count"]) == (3, 2)
+
+
+def test_order_values_must_be_json_numbers(client, owner):
+    """Found by Property 13: numeric strings, booleans and NaN were accepted as order values."""
+    url = f"/api/cards/{owner['card']['id']}/position"
+    for bad in ("1", True, None, "NaN"):
+        res = client.patch(url, json={"column_id": owner["done"]["id"], "order": bad}, headers=owner["headers"])
+        assert res.status_code == 400, bad
+    assert client.patch(url, json={"column_id": owner["done"]["id"], "order": 1}, headers=owner["headers"]).status_code == 200
+    reorder = f"/api/boards/{owner['board']['id']}/columns/reorder"
+    assert client.patch(reorder, json={"columns": [{"id": owner["todo"]["id"], "order": "5"}]}, headers=owner["headers"]).status_code == 400
+    assert client.patch(reorder, data='{"columns": [{"id": "%s", "order": NaN}]}' % owner["todo"]["id"],
+                        content_type="application/json", headers=owner["headers"]).status_code == 400

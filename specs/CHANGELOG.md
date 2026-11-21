@@ -220,6 +220,14 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Why:** the owner could not see any animation and asked for it to be on by default, and asked for a BRD to reuse on later projects. Markdown was chosen over Word so the BRD is versioned with the code, reviewable in pull requests and readable by AI tools.
 - **Refinement prompt:** "What does Animate background do? I don't see any animation; make it on by default. Make the BRD of this project, including what I asked in this chat, so I can reuse it for other projects. Update the README."
 
+### 28. The API moves to Render with Gunicorn (project owner's decision)
+
+- **Before (R27, entry 20):** the Flask API ran on Vercel as a Python function, connected through Supabase's transaction pooler (port 6543) with no client-side pool, and `backend/vercel.json` trimmed the bundle. The 4 MB upload limit was justified by Vercel's 4.5 MB request limit.
+- **After:** the API runs on Render as a web service served by **Gunicorn** (`gunicorn wsgi:app --config gunicorn.conf.py`: threaded workers on `$PORT`, 60 s timeout), defined in a root `render.yaml` Blueprint with the health check `/api/health`. The build command runs `flask --app wsgi db upgrade` (pre-deploy commands need a paid plan). The API now uses Supabase's session pooler (port 5432, IPv4) with a small pool per worker (3 + 2, checked, recycled every 5 minutes); the transaction-pooler path stays for serverless hosts. The frontend stays on Vercel and the database on Supabase. `backend/vercel.json` was removed. Images still live in PostgreSQL, now because Render's filesystem is ephemeral; the 4 MB limit stays to keep the database small.
+- **Why:** the project owner chose Render for the backend and Vercel for the frontend, which also brings back Gunicorn, the server the course brief lists. A long-running server can keep a connection pool, which removes a connection handshake from every request. Render's own Postgres free plan expires after 30 days, so the database stays on Supabase. Render's free instances sleep after 15 minutes without traffic and take about a minute to wake, which the README and the latency check now mention.
+- **Also fixed:** while re-running the suite, Hypothesis found that Property 13 failed for `"order": "1"`: marshmallow's `Float` accepts numeric strings (and the column reorder schema also accepted NaN). A `JsonNumber` field (`app/common/fields.py`) now accepts only real JSON numbers for both, with a regression test.
+- **Refinement prompt:** "I changed my mind: I will use Render for the backend and Vercel for the frontend, so we can still use Gunicorn."
+
 ---
 
 ## v5 — Template for the next round

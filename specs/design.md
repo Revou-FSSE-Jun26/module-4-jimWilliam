@@ -4,7 +4,7 @@
 
 RevoTask is a Trello-like task manager made of two deployables.
 
-- **Backend**: Flask REST API (SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL, Gunicorn locally) on Vercel as a Python function, with PostgreSQL on Supabase.
+- **Backend**: Flask REST API (SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow, PostgreSQL) served by Gunicorn on Render, with PostgreSQL on Supabase.
 - **Frontend**: Next.js App Router application (React, TypeScript, Tailwind CSS, react-hot-toast) on Vercel.
 
 Code examples use Python for the Backend and TypeScript for the Frontend.
@@ -41,8 +41,8 @@ No file under `backend/` or `frontend/` may be added in commits 1 and 2. This ca
 flowchart LR
     Browser -->|HTTPS + Session_Cookie| Vercel[Next.js Frontend]
     Vercel -->|server: API_BASE_URL, Bearer JWT from cookie| API
-    Browser -->|client: NEXT_PUBLIC_API_BASE_URL, Bearer JWT from AuthContext| API[Flask API on Vercel]
-    API -->|transaction pooler :6543| DB[(Supabase PostgreSQL)]
+    Browser -->|client: NEXT_PUBLIC_API_BASE_URL, Bearer JWT from AuthContext| API[Flask API on Render, Gunicorn]
+    API -->|session pooler :5432| DB[(Supabase PostgreSQL)]
 ```
 
 Backend layout (paths match the brief and rubric exactly):
@@ -86,6 +86,7 @@ frontend/
     shared/                    # BaseButton.tsx BaseBadge.tsx BaseModal.tsx
     layout/                    # AppBackground AppShell Sidebar NavTree NavDrawer TopBar ProfileCapsule ProfileMenu Avatar
     board/                     # KanbanBoard ColumnView CardItem MoveControl DropPlaceholder AnalyticsPanel MembersPanel
+                               # BoardTile AvatarStack BoardSettings ColumnManager
     profile/                   # ProfileHero ProfileForm
     CardDetailModal.tsx  CommentList.tsx  NotificationBell.tsx
   hooks/                       # useDragAndDrop.ts useNotifications.ts useErrorHandler.ts useDebouncedValue.ts
@@ -108,7 +109,7 @@ All routes are under `/api`. "JWT" means `@jwt_required()`.
 | B1 | POST /api/auth/register | auth | no | 201 User | 400, 409 |
 | B2 | POST /api/auth/login | auth | no | 200 `{token, expires_at, user}` | 400, 401 |
 | B3 | POST /api/boards | boards | yes | 201 Board (creator becomes admin) | 400, 401 |
-| B4 | GET /api/boards | boards | yes | 200 Board list with `role` | 401 |
+| B4 | GET /api/boards | boards | yes | 200 Board list; each Board has `role`, `member_count`, `card_count`, `done_count`, `open_card_count` and `members_preview` (at most 4 `{user_id, name, avatar_url}`) | 401 |
 | B5 | GET /api/boards/<id> | boards | member | 200 Board with Columns and Cards | 401, 403, 404 |
 | B6 | PATCH /api/boards/<id> | boards | admin | 200 Board | 400, 401, 403, 404 |
 | B7 | DELETE /api/boards/<id> | boards | admin | 200 | 401, 403, 404 |
@@ -154,6 +155,8 @@ All routes are under `/api`. "JWT" means `@jwt_required()`.
 | P5 | /my-tasks | Client Component | yes | B13 (`assignee=me`, `search=<term>`) |
 | P6 | /profile | Client Component | yes | B24, B25 |
 
+P3 also lists the Boards from B4 with the counts and member preview each tile needs (R13.5, R13.6). P4 hosts Board settings for Board_Admins, which calls B6 (rename) and B7 (delete) (R14.7–R14.12), and B9 for column reordering (R49.8).
+
 Pages P3–P6 sit inside the `(app)` route group, whose layout renders the AppShell: the Sidebar (or the Nav_Drawer below 768 px), the Top_Bar with NotificationBell (B21, B22), and the Profile_Capsule, whose Profile_Menu holds the Log out command that calls the `deleteSession` Server Action. P1 and P2 sit in the `(auth)` route group without the shell. Route groups do not change URLs. `middleware.ts` redirects protected paths to /login when the Session_Cookie is missing or its JWT `exp` has passed, and redirects /login and /register to / when it is valid (R12.6, R32.6).
 
 ## Components and Interfaces
@@ -193,6 +196,8 @@ Column, Card and Comment services resolve the Board first (`column.board_id`, `c
 
 Membership service (`boards/service.py`): `create_board` inserts the Board and an `admin` BoardMember for the creator in one transaction (R2.1). `add_member` looks up the User by email (404), rejects an existing membership (409) and creates a Notification for the added User (R31.11). `remove_member` counts admins in the same transaction and returns 409 if the removal would leave none (R31.7).
 
+Board list summary (`boards/service.list_boards`, R13.5). The list keeps the correlated scalar subqueries of R46 (`card_count`, last Column id, `done_count`) and derives `open_card_count = card_count - (done_count or 0)`. `done_count` is null when the Board has fewer than two Columns, so such a Board counts all its live Cards as open; soft-deleted Cards are in neither count. `members_preview` comes from one extra query for all listed Boards, not one per Board: `BoardMember` joined to `User`, numbered with `row_number() OVER (PARTITION BY board_id ORDER BY board_members.created_at, board_members.id)`, keeping rows 1 to 4. Each entry is `{user_id, name, avatar_url}`, where `avatar_url` comes from the same user serializer as every other user shape (R41.4). `member_count` stays the total, so the Frontend can compute how many members the preview leaves out.
+
 Card position (`cards/schema.py`, `cards/service.py`):
 
 ```python
@@ -218,7 +223,7 @@ Analytics (`analytics/service.py`) joins `Column`, `Card`, `Comment`, `BoardMemb
 
 Notifications are created by services in the same transaction as the triggering change (R31.11): `boards/service.add_member` ("You were added to <board>"), `cards/service.update_card` when `assignee_id` changes to another User ("You were assigned <card>"), and `comments/service.create_comment` when the Card's assignee is not the commenter ("New comment on <card>"). No Notification is created for a User's own actions.
 
-Security configuration (`create_app`): `JWT_SECRET_KEY`, `DATABASE_URL`, `FRONTEND_ORIGIN` and `JWT_ACCESS_TOKEN_EXPIRES_HOURS` come from environment variables; a `postgres://` or `postgresql://` URL is rewritten to `postgresql+psycopg://`; when the URL uses Supabase's transaction pooler (port 6543), `engine_options()` sets `NullPool` and `prepare_threshold=None`, because the pooler shares server connections between transactions and does not support prepared statements; CORS allows only `FRONTEND_ORIGIN` with the `Authorization` and `Content-Type` headers; passwords use `werkzeug.security.generate_password_hash` (salted); all database access goes through SQLAlchemy bound parameters.
+Security configuration (`create_app`): `JWT_SECRET_KEY`, `DATABASE_URL`, `FRONTEND_ORIGIN` and `JWT_ACCESS_TOKEN_EXPIRES_HOURS` come from environment variables; a `postgres://` or `postgresql://` URL is rewritten to `postgresql+psycopg://`; for PostgreSQL, `engine_options()` keeps a small checked and recycled pool per Gunicorn worker (Render, session pooler); when the URL uses Supabase's transaction pooler (port 6543), it sets `NullPool` and `prepare_threshold=None` instead, because the pooler shares server connections between transactions and does not support prepared statements; CORS allows only `FRONTEND_ORIGIN` with the `Authorization` and `Content-Type` headers; passwords use `werkzeug.security.generate_password_hash` (salted); all database access goes through SQLAlchemy bound parameters.
 
 ### Frontend
 
@@ -279,6 +284,12 @@ The result is strictly between the neighbours (R15.3) and positive when `next > 
 `useNotifications` polls B21 every 30 000 ms with `setInterval` while AuthContext has a token, and clears the interval on unmount or sign-out. It exposes `unreadCount` and `markRead(id)`. NotificationBell renders the count in BaseBadge and hides it when the count is 0. The unread count comes from an `unread_count` field that B21 returns next to the page items, so it stays correct when unread Notifications fall outside the first page.
 
 Shared components (`components/shared/`): `BaseButton` (variants `primary | secondary | destructive`; ignores clicks while `disabled`), `BaseBadge` (variants `neutral | info | success | warning | danger`), `BaseModal` (native `<dialog>` opened with `showModal()`, `aria-labelledby` on its title, `closedby="any"`, a close button with an accessible name, `autofocus` on the first field; the browser provides the inert page, focus containment, Escape and focus return, so BaseModal adds no `role="dialog"`, `aria-modal`, focus trap or Escape handler). Feature components: `CardDetailModal` (BaseModal containing card fields, assignee select and CommentList), `CommentList` (loads B18, posts B17, shows edit/delete only when `comment.user_id === currentUser.id`), `MembersPanel` (admin only, B27–B29, add form inside BaseModal), `AnalyticsPanel` (admin only, B23).
+
+BaseButton exemption (R20.6). Pages P1–P6 render every button through BaseButton, which stamps `data-base-button` on its `<button>`. The only other `<button>` elements allowed are inside two shell components: the Nav_Tree (`<nav aria-label="Main">`, in both the Sidebar and the Nav_Drawer) and the Profile_Menu, including its Profile_Capsule trigger. Both need `aria-expanded`, `aria-controls`, `aria-haspopup` and menu roles that BaseButton does not provide (R35.8, R36.4). Those two components carry `data-shell-buttons`, so a test can tell an exempt button from a stray one without a list of selectors.
+
+Dashboard tile (R13.5–R13.7). `components/board/BoardTile.tsx` renders the Board name, role badge, `open_card_count` and an `AvatarStack`. The count reads "N open cards", or "1 open card" for 1 (0 reads "0 open cards"). `components/board/AvatarStack.tsx` takes `members` (the preview), `total` (`member_count`) and renders the Avatars overlapped by a negative inline margin, each with a rim in the surface colour so the overlap stays readable. When `total` is greater than `members.length`, it adds a "+N" chip with N = `total - members.length`. The Avatars and the chip are `aria-hidden`; one visually hidden text, "5 members" (or "1 member"), names the total for assistive technology. A Board created from the dashboard form is added to the list from the B3 response, with `open_card_count: 0`, `member_count: 1` and `members_preview` set to the signed-in User from AuthContext, so the tile needs no refetch.
+
+Board settings and the board list (R14.7–R14.12). `BoardSettings` is opened from the Top_Bar control, which renders only when the Board's `role` is `admin`; for a `member` the control is not in the DOM. The name field is controlled and starts from the saved Board; `isDirty = fields.some(differsFromSaved)` enables "Save changes". On save the component calls B6, shows a success toast, replaces the saved values with the response and calls `router.refresh()`, which re-runs the `(app)` layout and P3 server fetches of B4, so the Top_Bar title, the Nav_Tree and the dashboard tile show the new name without a reload. "Delete board…" swaps the dialog body for a confirmation step that states what is removed ("Delete board permanently" and "Keep board"); B7 is called only from "Delete board permanently". On success it shows a toast, calls `router.replace("/")` and `router.refresh()`. On any `ApiError` from B6 or B7, `useErrorHandler` shows the error toast and the dialog stays open with the entered values, because state is changed only after the call resolves. A 403 caused by a role that changed since the page loaded is handled the same way.
 
 Search debounce: a `useDebouncedValue(term, 300)` hook feeds B13 on /my-tasks. Results and assigned Cards are grouped by `board_name` and link to `/boards/<board_id>` (R17.5, R17.6). Mobile support (R27.5): Tailwind responsive classes, the page itself never scrolls sideways, the Kanban row scrolls inside its own `overflow-x-auto` container with `snap-x`, each Column is `w-[85vw] sm:w-72`, and the Move_Control replaces dragging on touch screens.
 
@@ -529,7 +540,7 @@ With a photo (R41.4), the Avatar renders the AVIF through ProtectedImage inside 
 
 - **Data.** `boards` gains `purpose` (String 280), `color_hue` (Integer with a `0..359` check), `notes` and `notes_text` (sanitised HTML and its plain text, through `richtext.clean_description`). `board_links` (id, board_id → boards cascade, created_by → users set null, title 120, url 2048, timestamps) is new. `media` gains `board_id` (→ boards cascade) and the kind `board` for board photos.
 - **Routes.** B6 (PATCH /api/boards/<id>, admin) accepts any of `name`, `purpose`, `color_hue` (null clears the last two; an empty body is 400). B3 accepts `purpose` and `color_hue`. New: B36 PATCH /api/boards/<id>/notes (member), B37 GET and B38 POST /api/boards/<id>/links (member), B39 DELETE /api/boards/links/<id> (creator or admin), B40 GET and B41 POST /api/boards/<id>/photos (member). Board photos are deleted through B34, which now resolves the board from either the card or the photo. B4 and B5 include `purpose` and `color_hue`; B5 includes `notes`.
-- **Links, not uploads, for recordings and documents.** The Vercel request limit (4.5 MB, 4 MB in the API) and PostgreSQL storage suit small AVIF images, not video, audio or PDFs. Links point to wherever the recording already lives (Meet, Zoom, Drive); the schema accepts only http and https URLs with a host, so `javascript:`, `data:` and `file:` links are rejected, and the frontend renders them with `target="_blank" rel="noopener noreferrer nofollow"`.
+- **Links, not uploads, for recordings and documents.** The API's 4 MB upload limit and PostgreSQL storage suit small AVIF images, not video, audio or PDFs. Links point to wherever the recording already lives (Meet, Zoom, Drive); the schema accepts only http and https URLs with a host, so `javascript:`, `data:` and `file:` links are rejected, and the frontend renders them with `target="_blank" rel="noopener noreferrer nofollow"`.
 - **Frontend.** `BoardSettings` (`components/board/BoardSettings.tsx`) has three sections: General and appearance (name, purpose textarea with a character count, `BoardColorPicker`), Columns (`ColumnManager`: inline rename, move left and right, delete with a confirmation naming the card count, add at a chosen position; a reorder sends `renumber()`, orders 1024, 2048, … for the whole sequence), and Danger zone. `BoardBrief` ("About this board") shows the purpose, a notes `RichTextEditor` with Save, the links list with an add form (a bare domain gets `https://`), and an `ImageGallery` (the card gallery, generalised by path, limit and heading). Both dialogs keep their body mounted through the closing animation and start fresh on each opening (`useOpenSession`, a session number derived during render).
 - **Purpose and colour in the UI.** The board's Top_Bar title has a colour dot, and the subtitle is the purpose (a button that opens About; the role text is shown when there is no purpose). An "About" button is shown to every member, beside the admin-only Members, Analytics and Settings. Dashboard tiles show the purpose and a radial wash of the board colour. `lib/boardColor.ts` holds the palette (Coral 30, Amber 75, Kelp 140, Sea glass 175, Lagoon 215, Deep water 255, Violet 300, Rose 350) and `boardHue(board) = color_hue ?? avatarHue(id)`; every use keeps OKLCH lightness 0.74 and chroma 0.11, so contrast does not depend on the choice.
 
@@ -545,7 +556,9 @@ The background is on by default (`DEFAULT_PREFS.animateBg = true`; a cookie that
 
 - **Due dates.** `cards.due_date` and `boards.due_date` are SQL `DATE` columns; marshmallow `fields.Date` accepts only real "YYYY-MM-DD" dates. `lib/due.ts` parses them as local dates, counts calendar days with `Date.UTC` of each local date (so daylight-saving shifts never change the count), and maps them to tones: done (Card in the last Column), overdue (< 0), today (0), soon (1–2 days), later. `DueChip` and `DeadlineChip` render only on the client (`useNow`), because "today" is the reader's today, and carry the tone in visually hidden text as well as colour.
 - **"+" tile and add dialog.** The inline form at the end of the Kanban is replaced by a 3.5rem dashed tile (wider with "Add your first column" on an empty board) that opens `AddColumnDialog`. It and the settings manager share `createColumnAt` (POST, then one renumbered reorder when the new column is not last) and `insertIndex`.
-- **Dragging columns in settings.** Native HTML5 drag on the row, armed only from the grip (`pointerdown` sets `draggable` on that row), so text in the name field can still be selected. `dragover` picks before or after from the pointer's position against the row's middle and draws a drop line; `drop` uses `moveItem` and one reorder request. The arrow buttons stay for keyboard and touch.
+- **Dragging columns in settings.** Native HTML5 drag on the row, armed only from the grip (`pointerdown` sets `draggable` on that row), so text in the name field can still be selected. `dragover` picks before or after from the pointer's position against the row's middle and draws a drop line; `drop` uses `moveItem` and one reorder request. The arrow buttons stay for keyboard and touch. Each row's move-left and move-right buttons have accessible names that include the Column name, such as "Move To do left" (R49.9).
+
+The drop is optimistic and reverts on failure (R49.8), with the same pattern as `moveCard`. `ColumnManager.reorder(from, to)` saves a snapshot of the Column list, computes `next = moveItem(columns, from, to)`, shows `next` at once (the Kanban reads the same state, so it changes too, R49.5), then sends B9 with `renumber(next)`: one request, distinct, strictly increasing positive orders for the whole sequence. If the call throws `ApiError`, it restores the snapshot and `useErrorHandler` shows the error toast. A drop onto the row's own position sends no request. Arrow-button moves go through the same `reorder`.
 - **Custom colour.** `lib/oklch.ts` converts sRGB to OKLab (Björn Ottosson's matrices) for `hueFromHex` and back for `hexFromHue`, so the native colour input shows the colour the board will really use. Chroma below 0.02 is treated as grey and refused. The slider's track is the hue wheel at the board lightness and chroma.
 - **Dialogs.** `dialog.base-modal` is `overflow: hidden` (user agents give modal dialogs `overflow: auto`, which was the second scrollbar), `.modal-frame` is a flex column with `max-block-size: inherit`, and `.modal-body` is the only scroller, with the same scroll-driven edge fades as the Nav_Tree and card lists (no `backdrop-filter` inside, so the mask is safe). `sheet` is now on by default, so every dialog is a bottom sheet below 768 px; `wide` dialogs are up to 52rem.
 - **Collapsible sidebar.** The fourth part of the prefs cookie is `sidebarCollapsed`; `htmlAttributes` renders `data-sidebar`. Every rail rule from the 768–1279 px media query is repeated under `@media (width >= 80rem)` with `:root[data-sidebar="collapsed"]` in front (generated once, so both stay identical), plus the width, padding and `--main-start` of the rail. NavTree treats "wide and collapsed" as rail, so the Boards group becomes a flyout. Width, page padding and the Kanban row's margins transition over 380 ms with `--ease-smooth`.
@@ -560,7 +573,7 @@ The background is on by default (`DEFAULT_PREFS.animateBg = true`; a cookie that
 
 ### Media and rich text (R40–R43)
 
-**Upload pipeline (backend `app/common/images.py`):** the request body (at most 4 MB, `MAX_CONTENT_LENGTH`, under Vercel's 4.5 MB limit) is read into memory. Pillow opens it with `formats=("JPEG","PNG","WEBP","GIF","AVIF","BMP","TIFF")`, refuses more than 40 megapixels before decoding (decompression-bomb warnings are errors), applies the EXIF orientation, converts to RGB or RGBA, clears `info` (EXIF, XMP, comments; the ICC profile is kept) and saves AVIF at speed 8. Avatars use `ImageOps.fit` to a square of at most 512 px at quality 70; attachments are resized to 2048 px (quality 65) and 480 px (quality 55). The original bytes go out of scope with the request.
+**Upload pipeline (backend `app/common/images.py`):** the request body (at most 4 MB, `MAX_CONTENT_LENGTH`) is read into memory. Pillow opens it with `formats=("JPEG","PNG","WEBP","GIF","AVIF","BMP","TIFF")`, refuses more than 40 megapixels before decoding (decompression-bomb warnings are errors), applies the EXIF orientation, converts to RGB or RGBA, clears `info` (EXIF, XMP, comments; the ICC profile is kept) and saves AVIF at speed 8. Avatars use `ImageOps.fit` to a square of at most 512 px at quality 70; attachments are resized to 2048 px (quality 65) and 480 px (quality 55). The original bytes go out of scope with the request.
 
 **Signed_URL (`app/common/media_urls.py`):** `/api/media/<id>?v=<variant>&exp=<unix>&sig=<hex>`, where `sig` is the first 32 hex characters of HMAC-SHA256 over `"<id>:<variant>:<exp>"` with a key derived from the JWT secret (`sha256("revotask-media-v1:" + secret)`, so the JWT key itself never signs URLs). `exp` is the next hour boundary plus one hour, so a URL is stable for an hour (browser cache hits) and lives one to two hours. Verification uses `hmac.compare_digest`. The API returns paths; `mediaUrl()` in `lib/apiClient.ts` prefixes the API host.
 
@@ -618,8 +631,8 @@ View Transitions use React 19.3's `<ViewTransition>` (v3 entry 17). Next.js rout
 ### Page designs
 
 - **P1 /register and P2 /login** (`(auth)` layout). From 1024 px the layout has two columns: on the start side a Fraunces display line, "Move work forward, one card at a time.", above a small CSS-only stack of three glass pebbles labelled To do, Doing and Done; on the end side the auth card (Glass_Raised, `--radius-shell`). On page load one pebble glides from To do to Done once; this is the only unprompted motion in the product, and it rests at Done under reduced motion. Below 1024 px only the card is shown, centred. Fields use floating labels (`placeholder=" "` with `:placeholder-shown`), error text below each field linked with `aria-describedby` and `aria-invalid`, entering and leaving with the entry and exit pattern, a show/hide password button, and a full-width primary BaseButton whose label changes to "Signing in…" while pending.
-- **P3 / (dashboard).** The H1 is "Your boards", with a short greeting line under it. Board tiles are Glass_Panes showing the name (heading style), a role BaseBadge (`info` for admin, `neutral` for member), an avatar stack (at most 4 plus "+n") and the open Card count. The first tile is a dashed-rim "New board" tile that opens BaseModal. Empty state: "No boards yet. Create a board to start organising work." with the primary button.
-- **P4 /boards/[id] (Kanban).** The Top_Bar title is the Board name. Admins see Members and Analytics buttons; `#members` opens MembersPanel in BaseModal, and `#analytics` expands the AnalyticsPanel (a collapsible Glass_Pane above the Columns). A Column header has the name (click to rename inline), a count BaseBadge and a column menu (popup menu: Rename, Delete column). The Card list scrolls inside its Column (`overscroll-behavior: contain`). "Add card" expands into an inline form, and a trailing ghost pane adds a Column. Each Card shows the title (2-line clamp), the assignee avatar, the comment count and the Move_Control; the meta row appears only when the Card's container is at least 14rem wide (`@container`, R38.6). The drop placeholder is a 4rem dashed-rim slot.
+- **P3 / (dashboard).** The H1 is "Your boards", with a short greeting line under it. Board tiles (`BoardTile`) are Glass_Panes showing the name (heading style), a role BaseBadge (`info` for admin, `neutral` for member), the open Card count labelled "open cards" and an `AvatarStack` of at most 4 overlapping Avatars followed by a "+N" chip when the Board has more members than Avatars shown (R13.5, R13.6). The first tile is a dashed-rim "New board" tile that opens BaseModal. Empty state: "No boards yet. Create a board to start organising work." with the primary button.
+- **P4 /boards/[id] (Kanban).** The Top_Bar title is the Board name. Admins see Members, Analytics and Board settings buttons (R14.7); members do not see Board settings (R14.11); `#members` opens MembersPanel in BaseModal, and `#analytics` expands the AnalyticsPanel (a collapsible Glass_Pane above the Columns). A Column header has the name (click to rename inline), a count BaseBadge and a column menu (popup menu: Rename, Delete column). The Card list scrolls inside its Column (`overscroll-behavior: contain`). "Add card" expands into an inline form, and a trailing ghost pane adds a Column. Each Card shows the title (2-line clamp), the assignee avatar, the comment count and the Move_Control; the meta row appears only when the Card's container is at least 14rem wide (`@container`, R38.6). The drop placeholder is a 4rem dashed-rim slot.
 - **CardDetailModal.** A BaseModal up to 40rem wide, shown as a full-height sheet below 768 px. It has an editable title, a description textarea, an assignee select of Board_Members, and the CommentList. Each Comment is a pebble bubble with the author avatar and time; edit and delete are owner-only (shown on hover and focus-within, always on touch), and edit swaps the text for a textarea in place.
 - **P5 /my-tasks.** A search field with a clear button at the top. Results are grouped under Board-name headings with a count badge, and each Card row links to its Board.
 - **P6 /profile.** The ProfileHero is a Glass_Pane with a 6rem avatar, the name, the email and three stat chips (Boards, Admin of, Open tasks) from B4 and B13 (R36.8). The ProfileForm has floating-label name and email fields. Typing in the name field updates the hero immediately (R36.9). Unsaved changes show a buoy dot with the text "Unsaved changes", and enable Save and Reset (R36.10).
@@ -684,9 +697,9 @@ class Card(db.Model):
 
 `cards` also has `description_text`, the plain-text copy of the sanitised HTML `description` (R40.5). `users.avatar_id` is deliberately not a foreign key: `media.owner_id` already references `users`, and a key in the other direction would create a users ↔ media cycle. The avatar service sets and clears it in the same transaction as the media row.
 
-**Why images live in PostgreSQL:** Vercel functions have a read-only, short-lived filesystem, so files cannot be kept on the API server. AVIF images are small (an avatar is typically 5–20 KB, an attachment 50–300 KB), so a `bytea` column in Supabase is enough for this project and avoids a second storage service. The image bytes are deferred columns, so listing attachments never loads them.
+**Why images live in PostgreSQL:** Render's filesystem is ephemeral (it is reset on every deploy and restart, and the free plan has no persistent disk), so files cannot be kept on the API server. AVIF images are small (an avatar is typically 5–20 KB, an attachment 50–300 KB), so a `bytea` column in Supabase is enough for this project and avoids a second storage service. The image bytes are deferred columns, so listing attachments never loads them.
 
-Indexes: `cards(column_id, order)`, `cards(assignee_id)`, `columns(board_id, order)`, `board_members(user_id)`, `comments(card_id)`, `notifications(user_id, read)`. Schema changes go through Flask-Migrate. Before deploying a version with schema changes, `flask db upgrade` is run against Supabase over the session or direct connection (port 5432); the deployed API on Vercel uses the transaction pooler (port 6543) (R27.1, R27.2, R27.6).
+Indexes: `cards(column_id, order)`, `cards(assignee_id)`, `columns(board_id, order)`, `board_members(user_id)`, `comments(card_id)`, `notifications(user_id, read)`. Schema changes go through Flask-Migrate. Before deploying a version with schema changes, Render's build command runs `flask --app wsgi db upgrade` against Supabase over the session pooler (port 5432), which the API also uses at run time (R27.1, R27.2, R27.6).
 
 Float precision: repeated midpoint insertion between the same two neighbours exhausts double precision after roughly 50 inserts. R30.5 forbids touching other rows during a move, so no rebalancing is done in a move. This is accepted for the project scope.
 
@@ -696,6 +709,9 @@ Notable response shapes:
 {"data": {"token": "eyJ…", "expires_at": "2026-11-20T10:00:00Z", "user": {"id": "uuid", "name": "…", "email": "…"}}}
 {"data": {"items": [{"id": "uuid", "message": "…", "read": false, "created_at": "…"}],
           "page": 1, "per_page": 10, "total": 23, "unread_count": 4}}
+{"data": [{"id": "uuid", "name": "…", "role": "admin", "member_count": 5, "card_count": 12, "done_count": 4,
+           "open_card_count": 8,
+           "members_preview": [{"user_id": "uuid", "name": "…", "avatar_url": null}]}]}
 {"data": {"id": "uuid", "column_id": "uuid", "board_id": "uuid", "board_name": "…", "title": "…", "order": 1536.0, "updated_at": "…"}}
 {"data": {"cards_per_column": [{"column_id": "uuid", "count": 3}],
           "completed_this_week": 2,
@@ -755,11 +771,18 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 13.1, 13.4 | P3 |
 | 13.2 | P3 (calls B3) |
 | 13.3 | P3 → P4 |
+| 13.5 | B4 (`open_card_count`, `members_preview`, `member_count`) |
+| 13.6 | P3 (BoardTile, AvatarStack; data from B4) |
+| 13.7 | P3 (create-board form; calls B3, tile built from the response and AuthContext) |
 | 14.1, 14.6 | P4 (calls B5) |
 | 14.2 | P4 (calls B8) |
 | 14.3 | P4 (calls B12) |
 | 14.4 | P4 (CardDetailModal) |
 | 14.5 | P4 (calls B23) |
+| 14.7, 14.11 | P4 (Top_Bar control, BoardSettings; role from the B4 list in AppShell) |
+| 14.8 | P4 (BoardSettings; calls B6; refreshes P3 data from B4) |
+| 14.9, 14.10 | P4 → P3 (BoardSettings confirmation step; calls B7) |
+| 14.12 | P4 (BoardSettings; B6 or B7 error) |
 | 15.1, 15.2, 15.3, 15.4 | P4 (calls B16) |
 | 16.1, 16.2, 16.3, 16.4, 16.5, 16.6 | P4 (CardDetailModal; calls B17, B18, B19, B20) |
 | 17.1, 17.2, 17.3, 17.4, 17.5 | P5 (calls B13) |
@@ -767,14 +790,14 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 18.1, 18.2, 18.3 | P6 (calls B24, B25) |
 | 19.1, 19.2, 19.3, 19.4, 19.5 | NotificationBell in shared layout on P3–P6 (calls B21, B22) |
 | 20.1, 20.2, 20.3, 20.4, 20.5 | — (shared components used by P1–P6) |
-| 20.6 | P1–P6 |
+| 20.6 | P1–P6 (every `<button>` is a BaseButton, except those inside the Nav_Tree and Profile_Menu shell components) |
 | 21.1–21.8 | — (apiClient, AuthContext and useErrorHandler used by P1–P6; 21.7 redirects to P2) |
 | 22.1–22.5 | — (Spec_Set deliverable; this table satisfies 22.3) |
 | 23.1–23.6 | — (Guideline_Set deliverable; 23.6 is the ordering constraint in the Overview) |
 | 24.1, 24.2 | — (pytest suite over B1–B29; 24.2 covers B17–B20) |
 | 25.1, 25.2 | — (Jest and React Testing Library over shared components and P4 children) |
 | 26.1–26.6 | — (Playwright over P1, P2, P3, P4; the 8-step journey uses B16 persistence and B17/B19 for comments) |
-| 27.1, 27.2, 27.4, 27.6 | — (Vercel and Supabase deployment) |
+| 27.1, 27.2, 27.4, 27.6 | — (`render.yaml` and `gunicorn.conf.py` for the API on Render, Vercel for the frontend, Supabase) |
 | 27.3 | B26, B1, B2 |
 | 27.5 | P1–P6 |
 | 28.1, 28.2, 28.3 | — (Repository) |
@@ -846,6 +869,8 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 48.4 | P3, P4 (BoardColorPicker) |
 | 49.6 | P4 (ColumnManager drag) |
 | 49.7 | P4 ("+" tile, AddColumnDialog; calls B8, B9) |
+| 49.8 | P4 (ColumnManager drag; calls B9) |
+| 49.9 | P4 (ColumnManager grip and arrow buttons) |
 | 51.1 | B3, B4, B5, B6, B12, B13, B14 |
 | 51.2 | P4, P5 (CardDetailModal, CardItem, My Tasks) |
 | 51.3 | P3, P4 (New board, Board settings, Top_Bar, tiles) |
@@ -882,7 +907,7 @@ Risks:
 
 *A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
 
-Redundant candidates were merged as follows. Register 201 and login success combine into one round trip. Duplicate email and invalid payload checks are kept separate because their statuses differ. 401, 403 and 404 checks over all routes collapse into three cross-route properties. Comment owner-only update and delete combine with the 403 case. Notification 403 merges into the general ownership property. Unread count display and hide-at-zero merge into one property. Board 404 and 403 for analytics merge into the access properties. Position persistence (4.5) subsumes reload persistence (14.6) at the API level.
+Redundant candidates were merged as follows. Register 201 and login success combine into one round trip. Duplicate email and invalid payload checks are kept separate because their statuses differ. 401, 403 and 404 checks over all routes collapse into three cross-route properties. Comment owner-only update and delete combine with the 403 case. Notification 403 merges into the general ownership property. Unread count display and hide-at-zero merge into one property. Board 404 and 403 for analytics merge into the access properties. Position persistence (4.5) subsumes reload persistence (14.6) at the API level. For the dashboard and Board settings criteria, the open-card count and the member preview (13.5) share one backend property, and the tile label, avatar overflow and new-board tile (13.6, 13.7) share one frontend property. The Board settings control gating and the Save-enabled rule (14.7, 14.11) are one property. Column drag (49.8) reuses `moveItem` and `renumber` (Properties 52, 56) and adds only the optimistic and revert behaviour. The delete confirmation and error handling (14.9, 14.10, 14.12) are example tests.
 
 ### Property 1: Register then login round trip
 
@@ -1220,15 +1245,45 @@ For any string typed into the link field, `normaliseLink` returns null or a URL 
 
 **Validates: Requirements 40.3**
 
-Criteria not covered by a property are tested by examples, smoke checks or integration tests: page and component rendering (12.1–12.5, 12.7, 13.x, 14.2–14.5, 16.1–16.3, 16.6, 17.1, 17.3–17.6, 18.x, 19.2, 19.5, 20.x, 31.12, 31.13, 32.7, 33.1, 33.3), membership and notification examples (31.1, 31.5, 31.6, 31.9–31.11), session behaviour (32.1–32.5, covered by the Playwright auth scenarios and the reload step), structure and configuration (1.8, 4.1, 8.2, 11.1, 11.2, 11.5, 15.1, 21.1–21.3, 21.8, 30.2, 30.3), health (10.1), deliverables (22–29, including 26.6), latency (30.1), and the visual design criteria (34.1, 34.2, 34.4, 34.5, 34.7–34.9, 35.x, 36.1–36.4, 36.8–36.10, 37.x, 38.2–38.8, 39.1–39.3, 39.5, 39.6), which are covered by component tests and the Playwright visual suite, and the media and editor criteria (40.1, 40.2, 40.5, 40.6, 41.2–41.6, 42.2, 42.3, 42.5, 42.6, 43.1, 43.3–43.5), covered by `backend/tests/test_media.py`, `frontend/__tests__/media-and-editor.test.tsx` and `frontend/e2e/media.spec.ts`, and the stage and clock criteria (44.1–44.5, 45.1, 45.2, 45.4, 45.5), covered by `frontend/__tests__/stage-and-clock.test.tsx`, `frontend/e2e/stage.spec.ts` and the visual suite.
+### Property 57: Board list summary counts
+
+For any set of Boards, Columns, Cards (live and soft-deleted) and memberships, each Board in GET /api/boards has `open_card_count` equal to the number of its live Cards outside its last Column (all its live Cards when it has fewer than two Columns), and `members_preview` equal to the first `min(4, member_count)` Board_Members by ascending membership creation time, each with `user_id`, `name` and `avatar_url`, while `member_count` equals the total number of members.
+
+**Validates: Requirements 13.5**
+
+### Property 58: Board tile shows the counts and the avatar overflow
+
+For any `open_card_count` n, `member_count` m and preview of k Avatars with 0 ≤ k ≤ min(4, m), BoardTile shows n with the label "open cards" ("open card" when n is 1), shows exactly k Avatars, shows a "+(m − k)" chip if and only if m > k, and exposes the text "m members" ("1 member" when m is 1) to assistive technology. For a Board just created from the dashboard, the tile shows 0 open cards and one Avatar, the signed-in User's, with no chip.
+
+**Validates: Requirements 13.6, 13.7**
+
+### Property 59: Board settings follow role and unsaved changes
+
+For any Board role and any saved and entered Board name, the Board settings control is rendered if and only if the role is `admin`, and, once the dialog is open, "Save changes" is enabled if and only if the entered value differs from the saved one.
+
+**Validates: Requirements 14.7, 14.11**
+
+### Property 60: Column drag is optimistic and reverts on failure
+
+For any list of Columns and any drag from index i to index j, the Column list shown before the B9 response equals `moveItem(columns, i, j)`; the single reorder request carries every Column id once, with positive, strictly increasing orders in that displayed sequence; and if the request fails, the displayed list equals the list before the drop and an error toast is raised.
+
+**Validates: Requirements 49.8**
+
+### Property 61: Buttons come from BaseButton outside the shell menus
+
+For any page P1–P6 in any state the tests reach, every `<button>` in the document either carries `data-base-button` or has an ancestor with `data-shell-buttons` (the Nav_Tree and the Profile_Menu).
+
+**Validates: Requirements 20.6**
+
+Criteria not covered by a property are tested by examples, smoke checks or integration tests: page and component rendering (12.1–12.5, 12.7, 13.1–13.4, 14.2–14.5, 14.8–14.10, 14.12, 49.9, 16.1–16.3, 16.6, 17.1, 17.3–17.6, 18.x, 19.2, 19.5, 20.x, 31.12, 31.13, 32.7, 33.1, 33.3), membership and notification examples (31.1, 31.5, 31.6, 31.9–31.11), session behaviour (32.1–32.5, covered by the Playwright auth scenarios and the reload step), structure and configuration (1.8, 4.1, 8.2, 11.1, 11.2, 11.5, 15.1, 21.1–21.3, 21.8, 30.2, 30.3), health (10.1), deliverables (22–29, including 26.6), latency (30.1), and the visual design criteria (34.1, 34.2, 34.4, 34.5, 34.7–34.9, 35.x, 36.1–36.4, 36.8–36.10, 37.x, 38.2–38.8, 39.1–39.3, 39.5, 39.6), which are covered by component tests and the Playwright visual suite, and the media and editor criteria (40.1, 40.2, 40.5, 40.6, 41.2–41.6, 42.2, 42.3, 42.5, 42.6, 43.1, 43.3–43.5), covered by `backend/tests/test_media.py`, `frontend/__tests__/media-and-editor.test.tsx` and `frontend/e2e/media.spec.ts`, and the stage and clock criteria (44.1–44.5, 45.1, 45.2, 45.4, 45.5), covered by `frontend/__tests__/stage-and-clock.test.tsx`, `frontend/e2e/stage.spec.ts` and the visual suite.
 
 ## Testing Strategy
 
 **Dual approach.** Example tests cover specific scenarios and integration points. Property tests cover the universal properties above. Both are required.
 
-**Backend (pytest -v).** Property tests use Hypothesis with a minimum of 100 examples each. They run against the Flask test client with a transactional SQLite or PostgreSQL test database that is reset between examples. Properties 1–17, 19–25 and 35 live here. The comments suite must assert 201, 400, 401 and 403 (R24.2). Example tests cover B26, delete responses, Card model fields and Blueprint file structure.
+**Backend (pytest -v).** Property tests use Hypothesis with a minimum of 100 examples each. They run against the Flask test client with a transactional SQLite or PostgreSQL test database that is reset between examples. Properties 1–17, 19–25, 35 and 57 live here. The comments suite must assert 201, 400, 401 and 403 (R24.2). Example tests cover B26, delete responses, Card model fields and Blueprint file structure.
 
-**Frontend (npm test).** Jest and React Testing Library, with fast-check for Properties 18, 26–34, 36, 38 and 39 and a minimum of 100 runs each. Property 37 runs as a table test over the finite token set. Component tests also cover the Nav_Tree disclosure (`aria-expanded`, `hidden`), the Profile_Menu keyboard model (R36.4) and the ProfileForm dirty state (R36.10). Fake timers cover debounce and polling. Example tests cover BaseButton, BaseModal, CardDetailModal and NotificationBell (R25.2), page forms and toasts.
+**Frontend (npm test).** Jest and React Testing Library, with fast-check for Properties 18, 26–34, 36, 38, 39 and 58–61 and a minimum of 100 runs each. Property 37 runs as a table test over the finite token set. Component tests also cover the Nav_Tree disclosure (`aria-expanded`, `hidden`), the Profile_Menu keyboard model (R36.4) and the ProfileForm dirty state (R36.10). Fake timers cover debounce and polling. Example tests cover BaseButton, BaseModal, CardDetailModal and NotificationBell (R25.2), page forms and toasts.
 
 **End-to-end.** Playwright against the live Vercel URL (`PLAYWRIGHT_BASE_URL`), in two files:
 

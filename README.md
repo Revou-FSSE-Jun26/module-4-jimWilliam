@@ -11,7 +11,7 @@ A Trello-like task manager with a "sea glass" interface, built through a discipl
 <br />
 
 [![Live demo](https://img.shields.io/badge/Live_demo-coming_soon-9FD8CB?style=for-the-badge&logo=vercel&logoColor=0E2A33&labelColor=0E2A33)](#live-demo-and-demo-account)
-[![API](https://img.shields.io/badge/API-Flask_on_Vercel-9FD8CB?style=for-the-badge&logo=flask&logoColor=white&labelColor=0E2A33)](#deploy)
+[![API](https://img.shields.io/badge/API-Flask_on_Render-9FD8CB?style=for-the-badge&logo=flask&logoColor=white&labelColor=0E2A33)](#deploy)
 [![Docs](https://img.shields.io/badge/Docs-specs_%26_guidelines-9FD8CB?style=for-the-badge&logo=bookstack&logoColor=white&labelColor=0E2A33)](#project-documents)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org)
@@ -21,7 +21,9 @@ A Trello-like task manager with a "sea glass" interface, built through a discipl
 [![Flask](https://img.shields.io/badge/Flask-3-0E2A33?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
-[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
+[![Render](https://img.shields.io/badge/API_on-Render-46E3B7?style=flat-square&logo=render&logoColor=white)](https://render.com)
+[![Vercel](https://img.shields.io/badge/App_on-Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
+[![Gunicorn](https://img.shields.io/badge/Gunicorn-23-499848?style=flat-square&logo=gunicorn&logoColor=white)](https://gunicorn.org)
 
 [![pytest](https://img.shields.io/badge/pytest-112_passed-2E7D74?style=flat-square&logo=pytest&logoColor=white)](#run-the-tests)
 [![Jest](https://img.shields.io/badge/Jest-97_passed-2E7D74?style=flat-square&logo=jest&logoColor=white)](#run-the-tests)
@@ -65,7 +67,7 @@ RevoTask lets a team plan work on boards. Each board says what it is for and whe
 
 The business view (objectives, scope, every requirement and decision, and each change requested during the build) is in the [Business Requirements Document](docs/brd/BRD-RevoTask.md).
 
-It has two parts, both on Vercel: a **Flask REST API** backed by **Supabase PostgreSQL**, and a **Next.js** app with a glassmorphism interface.
+It has two parts: a **Flask REST API** served by **Gunicorn on Render**, backed by **Supabase PostgreSQL**, and a **Next.js** app on **Vercel** with a glassmorphism interface.
 
 | Role | What they can do |
 |---|---|
@@ -77,7 +79,7 @@ It has two parts, both on Vercel: a **Flask REST API** backed by **Supabase Post
 | | URL |
 |---|---|
 | 🌐 App | _add the frontend Vercel URL after deploying_ |
-| 🔌 API | _add the API Vercel URL after deploying_ (health check: `/api/health`) |
+| 🔌 API | _add the API Render URL after deploying_ (health check: `/api/health`; a free instance may take a minute to wake) |
 
 Sign in with the shared demo account to explore a board that already has columns and cards:
 
@@ -206,14 +208,14 @@ Sign in with the shared demo account to explore a board that already has columns
 ```mermaid
 flowchart LR
     U([Browser]) -->|HTTPS + HttpOnly session cookie| FE["Next.js 16 app<br/>Vercel"]
-    FE -->|Server Components: Bearer JWT from cookie| API["Flask API<br/>Vercel Python function"]
+    FE -->|Server Components: Bearer JWT from cookie| API["Flask API<br/>Gunicorn on Render"]
     U -->|Client Components: Bearer JWT| API
-    API -->|transaction pooler :6543| DB[("Supabase<br/>PostgreSQL")]
+    API -->|session pooler :5432, pooled| DB[("Supabase<br/>PostgreSQL")]
     DEV([Your machine]) -.->|flask db upgrade :5432| DB
 ```
 
 - **Eight Flask Blueprints** from the brief (`auth`, `boards`, `columns`, `cards`, `comments`, `notifications`, `analytics`, `users`) plus `media` for card images and signed image links, each with `routes.py`, `service.py` and `schema.py`.
-- **Images in PostgreSQL:** Vercel functions cannot keep files on disk, so uploads are stored as small AVIF files in Supabase and served from `/api/media/<id>` with an HMAC-signed, one-to-two-hour URL.
+- **Images in PostgreSQL:** Render's filesystem is reset on every deploy, so uploads are stored as small AVIF files in Supabase and served from `/api/media/<id>` with an HMAC-signed, one-to-two-hour URL.
 - Every response uses the same envelope: `{ "data": ... }` on success and `{ "error": "..." }` on failure.
 - `proxy.ts` (the Next.js 16 name for middleware) redirects signed-out visitors before a protected page renders.
 
@@ -222,22 +224,22 @@ flowchart LR
 | Layer | Tools |
 |---|---|
 | **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, TipTap 3 (rich-text editor), react-hot-toast |
-| **Backend** | Python 3.13, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Cors, Marshmallow, psycopg 3, Pillow (AVIF), nh3 (HTML sanitiser), python-dotenv; Gunicorn for production-style local runs |
+| **Backend** | Python 3.13, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Cors, Marshmallow, psycopg 3, Pillow (AVIF), nh3 (HTML sanitiser), python-dotenv; Gunicorn (the production server on Render) |
 | **Database** | PostgreSQL on Supabase (local PostgreSQL or SQLite for development) |
 | **Testing** | pytest + Hypothesis, Jest + React Testing Library + fast-check, Playwright + axe-core |
-| **Deployment** | Vercel (Next.js app, and the Flask API as a Python function), Supabase |
+| **Deployment** | Render (Flask API on Gunicorn, `render.yaml` Blueprint), Vercel (Next.js app), Supabase (PostgreSQL) |
 | **AI tools** | Kiro and Kiro CLI (specs, steering, generation, tests, docs); Claude Code for review and implementation |
 
 ## AI workflow summary
 
 ```mermaid
 flowchart LR
-    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>27 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
+    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>28 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
 ```
 
 1. **Brief.** `specs/brief.md` sets the overview, the two user roles, the core features, the tech stack and the non-functional requirements.
 2. **Specs with Kiro.** Kiro turned the brief into `requirements.md` (EARS acceptance criteria), `design.md` and `tasks.md`. The first version is kept in `specs-history/v1/`.
-3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 27 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
+3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 28 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
 4. **Steering guidelines first.** `guidelines/` holds 33 rules (backend, database, frontend), each with a Rule, a Rationale and a RevoTask Example. They were committed before any code, and `scripts/check-guidelines-first.ps1` verifies that order in the git history.
 5. **Generate, then review.** Code was generated task by task with the guidelines in context, and library APIs were checked against current documentation (Context7 and the Next.js docs bundled with the package). `guidelines/ai-comparison.md` compares the same prompt with and without guidelines: 8 violations dropped to 0.
 6. **Violations documented.** `guidelines/violation-report.md` lists 6 violations found in generated code, each with the guideline it breaks and the fix.
@@ -289,7 +291,7 @@ Then sign in with the [demo account](#live-demo-and-demo-account).
 
 | Suite | Command | What it covers | Result |
 |---|---|---|---|
-| **Backend** | `cd backend && pytest -v` | Every route and error status, plus 32 Hypothesis properties | ✅ 143 passed |
+| **Backend** | `cd backend && pytest -v` | Every route and error status, plus 32 Hypothesis properties | ✅ 145 passed |
 | **Frontend** | `cd frontend && npm test` | Components, pages and hooks, plus 21 fast-check properties | ✅ 131 passed |
 | **End to end** | `cd frontend && npx playwright test` | 4 auth scenarios, the 8-step Kanban journey, photo and image uploads, the full-height board and clock, board settings and About, due dates and the collapsible sidebar, layouts at 7 widths, axe scans | ✅ 17 passed |
 
@@ -305,7 +307,7 @@ TEST_DATABASE_URL=postgresql://user:pass@localhost:5432/revotask_test pytest -v 
 cd frontend
 npx playwright install                       # download the browsers once
 PLAYWRIGHT_BASE_URL=https://<your-app>.vercel.app \
-PLAYWRIGHT_API_URL=https://<your-api>.vercel.app \
+PLAYWRIGHT_API_URL=https://<your-api>.onrender.com \
 npx playwright test
 npx playwright show-report                   # open the HTML report
 npm run check:no-wait-for-timeout            # fails if any test uses waitForTimeout
@@ -317,16 +319,14 @@ Each Playwright run registers new users with unique emails, so it can run repeat
 
 ## Deploy
 
-RevoTask uses **two Vercel projects** (the Next.js app and the Flask API) and **one Supabase project** (PostgreSQL).
+RevoTask runs on three services: **Supabase** (PostgreSQL), **Render** (the Flask API, served by Gunicorn) and **Vercel** (the Next.js app).
 
 <details open>
 <summary><b>1. Database on Supabase</b></summary>
 
 1. Create a Supabase project and note the database password.
-2. In **Project Settings > Database > Connection string**, copy two URLs and add `?sslmode=require` to both:
-   - the **transaction pooler** (port **6543**), which the deployed API uses;
-   - the **session pooler** or direct connection (port **5432**), which migrations use.
-3. Apply the migrations and create the demo account from your machine, over port 5432:
+2. Click **Connect** and copy the **Session pooler** connection string (port **5432**). Add `?sslmode=require` to it. The session pooler works over IPv4, which Render needs; the direct connection (`db.<ref>.supabase.co`) is IPv6 unless your project has the IPv4 add-on.
+3. Create the demo account once from your machine (the Render build applies the migrations, but you can also run them here first):
 
    ```bash
    cd backend
@@ -336,37 +336,45 @@ RevoTask uses **two Vercel projects** (the Next.js app and the Flask API) and **
    python scripts/seed_demo.py
    ```
 
-   Run `flask --app wsgi db upgrade` again before deploying any version that adds a migration.
-
 </details>
 
 <details open>
-<summary><b>2. Flask API on Vercel</b></summary>
+<summary><b>2. Flask API on Render (Gunicorn)</b></summary>
 
-1. Create a Vercel project from this repository with the **root directory set to `backend`**. Vercel runs the Flask `app` exported by `wsgi.py`; `backend/vercel.json` keeps tests, migrations and scripts out of the bundle, and `.python-version` pins Python 3.13.
-2. Set the environment variables:
+1. In the Render Dashboard choose **New > Blueprint**, pick this repository, and Render reads [`render.yaml`](render.yaml). It creates the `revotask-api` web service with:
+
+   | Setting | Value |
+   |---|---|
+   | Root directory | `backend` |
+   | Build command | `pip install -r requirements.txt && flask --app wsgi db upgrade` (migrations run on every deploy) |
+   | Start command | `gunicorn wsgi:app --config gunicorn.conf.py` (threaded workers on `$PORT`, see [`backend/gunicorn.conf.py`](backend/gunicorn.conf.py)) |
+   | Health check | `/api/health` |
+   | Python | 3.13 (`PYTHON_VERSION`) |
+
+2. Render asks for the secret values:
 
    | Variable | Value |
    |---|---|
-   | `DATABASE_URL` | the **transaction pooler** URL (port 6543) |
-   | `JWT_SECRET_KEY` | a long random string |
-   | `JWT_ACCESS_TOKEN_EXPIRES_HOURS` | `24` |
-   | `FRONTEND_ORIGIN` | the frontend Vercel URL (add it after step 3) |
+   | `DATABASE_URL` | the Supabase **session pooler** URL from step 1 |
+   | `FRONTEND_ORIGIN` | the frontend Vercel URL (you can fill it in after step 3, then redeploy) |
 
-   On port 6543 the app automatically turns off prepared statements and client-side pooling, as Supabase's transaction pooler requires.
-3. Deploy, and check that `https://<your-api>.vercel.app/api/health` returns `{"data": {"status": "ok"}}`.
+   `JWT_SECRET_KEY` is generated by Render. `WEB_CONCURRENCY` (Gunicorn workers, default 2), `GUNICORN_THREADS` (4), `DB_POOL_SIZE` (3) and `DB_MAX_OVERFLOW` (2) can be tuned without code changes; keep workers × (pool + overflow) under the session pooler's connection limit.
+3. Once deployed, check that `https://<your-api>.onrender.com/api/health` returns `{"data": {"status": "ok"}}`.
 4. Verify with Postman: import `docs/postman/RevoTask.postman_collection.json` and its environment, set `baseUrl` to the API URL, and run the collection (health, register, login, then one request per Blueprint).
+
+> [!NOTE]
+> On Render's **free** plan the service sleeps after 15 minutes without traffic, and the next request takes about a minute while it wakes. Paid instance types stay awake and can run the migrations as a **pre-deploy command** instead of in the build (move `flask --app wsgi db upgrade` from `buildCommand` to `preDeployCommand` in `render.yaml`).
 
 </details>
 
 <details open>
 <summary><b>3. Next.js app on Vercel</b></summary>
 
-1. Create a second Vercel project from this repository with the **root directory set to `frontend`**.
-2. Set `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL` to the API URL.
-3. Deploy, then set `FRONTEND_ORIGIN` on the API project to this URL and redeploy the API.
-4. Run the Playwright suite against the live URL and commit `frontend/playwright-report/`.
-5. Optional: `python backend/scripts/latency_check.py https://<your-api>.vercel.app` checks that p95 latency stays under 500 ms. The first request after an idle period can be slower because of a serverless cold start.
+1. Create a Vercel project from this repository with the **root directory set to `frontend`**.
+2. Set `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL` to the Render API URL (`https://<your-api>.onrender.com`).
+3. Deploy, then set `FRONTEND_ORIGIN` on the Render service to the Vercel URL and redeploy the API.
+4. Run the Playwright suite against the live URLs and commit `frontend/playwright-report/`.
+5. Optional: `python backend/scripts/latency_check.py https://<your-api>.onrender.com` checks that p95 latency stays under 500 ms. It wakes a sleeping instance first and does not count that request.
 
 </details>
 
@@ -374,6 +382,7 @@ RevoTask uses **two Vercel projects** (the Next.js app and the Flask API) and **
 
 ```text
 revotask/
+├── render.yaml             Render Blueprint for the API (Gunicorn)
 ├── specs/                  brief, requirements, design, tasks, CHANGELOG
 ├── guidelines/             backend, database and frontend rules, AI comparison, violation report
 ├── backend/
@@ -382,6 +391,7 @@ revotask/
 │   ├── app/common/         access checks, images (AVIF), signed media links, rich-text sanitiser
 │   ├── app/models/         SQLAlchemy models
 │   ├── migrations/         Flask-Migrate
+│   ├── gunicorn.conf.py    Gunicorn settings (workers, threads, $PORT)
 │   ├── scripts/            seed_demo.py, latency_check.py
 │   └── tests/              pytest + Hypothesis
 ├── frontend/
@@ -404,16 +414,9 @@ revotask/
 | [`specs/requirements.md`](specs/requirements.md) | 53 requirements with EARS acceptance criteria |
 | [`specs/design.md`](specs/design.md) | Architecture, routes, UI/UX design system, 56 correctness properties, traceability |
 | [`specs/tasks.md`](specs/tasks.md) | The implementation plan, with progress |
-| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 27 refinements, each with a before and an after |
+| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 28 refinements, each with a before and an after |
 | [`guidelines/`](guidelines/) | Steering guidelines, the AI output comparison and the violation report |
 | [`docs/postman/`](docs/postman/) | Postman collection and environment for the deployed API |
-
-## Reuse the BRD for your next project
-
-1. Copy [`docs/brd/BRD-template.md`](docs/brd/BRD-template.md) into the new repository's `docs/brd/` folder.
-2. Answer **Appendix A** (hosting limits, files, roles, sessions, "done", dates, user content, design, accessibility, navigation, scrolling, testing, out of scope) before writing requirements. Each of these caused rework here when it was settled late.
-3. Fill sections 1–9, then write `requirements.md` and link each business requirement to the requirements that fulfil it.
-4. During the build, log every change request in section 10 and every lasting decision in section 9. [`BRD-RevoTask.md`](docs/brd/BRD-RevoTask.md) is the filled-in example.
 
 <br />
 

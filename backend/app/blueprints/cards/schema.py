@@ -1,3 +1,4 @@
+from app.common.fields import JsonNumber
 from app.common.media_urls import user_brief
 from marshmallow import EXCLUDE, Schema, ValidationError, fields, missing, pre_load, validate, validates_schema
 
@@ -34,8 +35,7 @@ class CardPositionSchema(Schema):
         unknown = EXCLUDE
 
     column_id = fields.UUID(required=True)
-    order = fields.Float(required=True, allow_nan=False,
-                         validate=validate.Range(min=0, min_inclusive=False))
+    order = JsonNumber(required=True, validate=validate.Range(min=0, min_inclusive=False))
 
 
 class CardQuerySchema(Schema):

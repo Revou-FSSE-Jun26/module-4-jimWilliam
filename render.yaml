@@ -1,0 +1,33 @@
+# Render Blueprint for the RevoTask API (R27). The Next.js frontend is deployed on Vercel and the
+# database lives on Supabase, so this file defines only the Flask web service.
+#
+# Create it in the Render Dashboard with New > Blueprint and pick this repository. Render asks for
+# the values marked `sync: false` when the Blueprint is first created.
+services:
+  - type: web
+    name: revotask-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    # Migrations run in the build on the free plan: pre-deploy commands need a paid instance type.
+    # On a paid plan, move `flask --app wsgi db upgrade` to `preDeployCommand` instead.
+    buildCommand: pip install -r requirements.txt && flask --app wsgi db upgrade
+    startCommand: gunicorn wsgi:app --config gunicorn.conf.py
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      # Supabase SESSION pooler, port 5432, with ?sslmode=require (see backend/.env.example).
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRES_HOURS
+        value: "24"
+      # The Vercel URL of the frontend (comma-separate several origins).
+      - key: FRONTEND_ORIGIN
+        sync: false
+      # Gunicorn workers; each runs several threads (gunicorn.conf.py). Two fit the free 512 MB instance.
+      - key: WEB_CONCURRENCY
+        value: "2"

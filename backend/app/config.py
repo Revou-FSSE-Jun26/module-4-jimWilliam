@@ -19,15 +19,28 @@ def _database_url(raw: str | None) -> str:
 
 
 def engine_options(url: str) -> dict:
-    """Engine settings for the connection in use.
+    """Engine settings for the connection in use (R27.6).
 
-    On Vercel the API runs as short-lived serverless functions and connects through Supabase's
-    transaction pooler (port 6543). That pooler hands each transaction to any server connection,
-    so prepared statements must be off (psycopg: prepare_threshold=None) and SQLAlchemy must not
-    keep its own pool (NullPool). Direct and session connections (port 5432) keep a normal pool.
+    On Render the API is a long-running Gunicorn server, so it keeps a small connection pool and
+    reaches Supabase through the session pooler (port 5432, IPv4). Each Gunicorn worker has its own
+    pool: with the defaults (2 workers, 3 + 2 connections each) the API holds at most 10 connections,
+    well inside the session pooler's limit on the free plan. Connections are checked before use and
+    recycled every 5 minutes, because poolers and the network close idle ones.
+
+    The transaction pooler (port 6543) is still supported for serverless hosts: it hands each
+    transaction to any server connection, so prepared statements must be off (psycopg:
+    prepare_threshold=None) and SQLAlchemy must not keep its own pool (NullPool).
     """
     if url.startswith("postgresql+psycopg://") and ":6543/" in url:
         return {"poolclass": NullPool, "connect_args": {"prepare_threshold": None}}
+    if url.startswith("postgresql+psycopg://"):
+        return {
+            "pool_pre_ping": True,
+            "pool_size": int(os.environ.get("DB_POOL_SIZE", "3")),
+            "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", "2")),
+            "pool_recycle": 300,
+            "pool_timeout": 10,
+        }
     return {"pool_pre_ping": True}
 
 
@@ -38,7 +51,8 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=float(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_HOURS", "24")))
     FRONTEND_ORIGINS = [o.strip() for o in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",") if o.strip()]
     JSON_SORT_KEYS = False
-    # Image uploads: Vercel functions accept request bodies up to 4.5 MB, so stay under that.
+    # Image uploads: 4 MB keeps the database small (images are stored in PostgreSQL) and matches the
+    # frontend's check in lib/upload.ts.
     MAX_CONTENT_LENGTH = 4 * 1024 * 1024
     # None = werkzeug's default (scrypt). Tests use a cheap method so property tests can register many users.
     PASSWORD_HASH_METHOD = None

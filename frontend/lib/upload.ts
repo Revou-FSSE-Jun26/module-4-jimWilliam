@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/apiClient";
 
-/** Matches the API's MAX_CONTENT_LENGTH (Vercel accepts request bodies up to 4.5 MB). */
+/** Matches the API's MAX_CONTENT_LENGTH (4 MB keeps the database small; images are stored in PostgreSQL). */
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 export const ACCEPTED_IMAGES = "image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/tiff";
 
