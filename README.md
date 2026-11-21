@@ -16,7 +16,9 @@ A Trello-like task manager with a "sea glass" interface, built through a discipl
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0_strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-26-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![ESLint](https://img.shields.io/badge/ESLint-10-4B32C3?style=flat-square&logo=eslint&logoColor=white)](https://eslint.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Flask](https://img.shields.io/badge/Flask-3-0E2A33?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org)
@@ -63,8 +65,6 @@ A Trello-like task manager with a "sea glass" interface, built through a discipl
 ## Overview
 
 RevoTask lets a team plan work on boards. Each board says what it is for and when it is due, and shows its progress as a level of liquid in the sidebar. Members create columns and cards, move cards by drag and drop (or with a "Move to" control on touch screens), format descriptions, attach images, set due dates, discuss work in comments, and follow the cards assigned to them. Board admins also configure the board, manage who can access it and watch progress through analytics and notifications.
-
-The business view (objectives, scope, every requirement and decision, and each change requested during the build) is in the [Business Requirements Document](docs/brd/BRD-RevoTask.md).
 
 It has two parts: a **Flask REST API** served by **Gunicorn on Render**, backed by **Supabase PostgreSQL**, and a **Next.js** app on **Vercel** with a glassmorphism interface.
 
@@ -220,28 +220,33 @@ flowchart LR
 - **Images in PostgreSQL:** Render's filesystem is reset on every deploy, so uploads are stored as small AVIF files in Supabase and served from `/api/media/<id>` with an HMAC-signed, one-to-two-hour URL.
 - Every response uses the same envelope: `{ "data": ... }` on success and `{ "error": "..." }` on failure.
 - `proxy.ts` (the Next.js 16 name for middleware) redirects signed-out visitors before a protected page renders.
+- **Close together, called once:** Vercel runs the server functions in Singapore (`sin1`, set in `frontend/vercel.json`), the same region as the Render API, because every server-rendered page calls the API. Within one page load, identical API calls are made once (React `cache()`); nothing is cached between users or requests, so data is never stale.
+- **One CORS setting:** the API only answers browsers from `FRONTEND_ORIGIN` (comma-separated; a trailing `/` is ignored).
 
 ## Technologies
 
 | Layer | Tools |
 |---|---|
-| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, TipTap 3 (rich-text editor), react-hot-toast |
+| **Frontend** | Next.js 16 (App Router), React 19, TypeScript 6 (strict), Tailwind CSS 4, TipTap 3 (rich-text editor), react-hot-toast; Node.js 26 |
 | **Backend** | Python 3.13, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Cors, Marshmallow, psycopg 3, Pillow (AVIF), nh3 (HTML sanitiser), python-dotenv; Gunicorn (the production server on Render) |
 | **Database** | PostgreSQL on Supabase (local PostgreSQL or SQLite for development) |
 | **Testing** | pytest + Hypothesis, Jest + React Testing Library + fast-check, Playwright + axe-core |
 | **Deployment** | Render (Flask API on Gunicorn, `render.yaml` Blueprint), Vercel (Next.js app), Supabase (PostgreSQL) |
 | **AI tools** | Kiro and Kiro CLI (specs, steering, generation, tests, docs); Claude Code for review and implementation |
 
+> [!NOTE]
+> Dependencies were updated on 21 November 2026 (Gunicorn 27, React 19.3, Tailwind 4.3, TypeScript 6.0, ESLint 10). TypeScript stays on 6.0 until `typescript-eslint` supports TypeScript 7, and three ESLint plugins bundled by Next.js are run on ESLint 10 through `overrides` in `frontend/package.json` after a rule-by-rule check. Details: [CHANGELOG entry 30](specs/CHANGELOG.md).
+
 ## AI workflow summary
 
 ```mermaid
 flowchart LR
-    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>28 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
+    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>30 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
 ```
 
 1. **Brief.** `specs/brief.md` sets the overview, the two user roles, the core features, the tech stack and the non-functional requirements.
 2. **Specs with Kiro.** Kiro turned the brief into `requirements.md` (EARS acceptance criteria), `design.md` and `tasks.md`. The first version is kept in `specs-history/v1/`.
-3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 28 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
+3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 30 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
 4. **Steering guidelines first.** `guidelines/` holds 33 rules (backend, database, frontend), each with a Rule, a Rationale and a RevoTask Example. They were committed before any code, and `scripts/check-guidelines-first.ps1` verifies that order in the git history.
 5. **Generate, then review.** Code was generated task by task with the guidelines in context, and library APIs were checked against current documentation (Context7 and the Next.js docs bundled with the package). `guidelines/ai-comparison.md` compares the same prompt with and without guidelines: 8 violations dropped to 0.
 6. **Violations documented.** `guidelines/violation-report.md` lists 6 violations found in generated code, each with the guideline it breaks and the fix.
@@ -418,7 +423,7 @@ revotask/
 | [`specs/requirements.md`](specs/requirements.md) | 53 requirements with EARS acceptance criteria |
 | [`specs/design.md`](specs/design.md) | Architecture, routes, UI/UX design system, 56 correctness properties, traceability |
 | [`specs/tasks.md`](specs/tasks.md) | The implementation plan, with progress |
-| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 28 refinements, each with a before and an after |
+| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 30 refinements, each with a before and an after |
 | [`guidelines/`](guidelines/) | Steering guidelines, the AI output comparison and the violation report |
 | [`docs/postman/`](docs/postman/) | Postman collection and environment for the deployed API |
 

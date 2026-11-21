@@ -132,7 +132,7 @@
 
 > These came up late in the RevoTask build and each caused rework. Answer them in the first week of the next project.
 
-1. **Hosting and its limits.** Where will each part run? Is the filesystem writable? What is the largest request? Are there long-running processes or schedulers? (These decide file storage, uploads and reminders.)
+1. **Hosting and its limits.** Where will each part run, and **in which region**? Put parts that call each other in the same region. Is the filesystem writable? What is the largest request? Does the free plan sleep? Are there long-running processes or schedulers? (These decide file storage, uploads, reminders and speed.)
 2. **Files.** Which files will users upload, how large, and where are they stored? Should originals be kept? Who may see them, and for how long may a link work?
 3. **Roles.** Which actions are per-workspace and which are per-object (per board, per project)? Who can undo or remove other people's content?
 4. **Sessions.** Must a session survive a reload? How long does it last? How does logout work on every device?
@@ -145,6 +145,8 @@
 11. **Scrolling and layout.** Does the page scroll, or the panels inside it? Should scrollbars be visible?
 12. **Testing and evidence.** Which test layers, which properties must always hold, and what proof the reviewer expects.
 13. **Out of scope.** What will *not* be built, and why, written down before anyone asks.
+14. **Configuration per environment.** List every environment variable for each host, where it is entered (environment variables, not secret files), and its exact format (for example, origins without a trailing `/`).
+15. **Runtime and toolchain versions.** Pin the runtimes (`engines`, `PYTHON_VERSION`) to what the hosts run, and check which versions your linters and frameworks support before upgrading (a newer compiler can break the linter).
 
 ## Appendix B: Workflow that worked
 

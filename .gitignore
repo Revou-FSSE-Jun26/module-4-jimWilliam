@@ -2,6 +2,9 @@
 .env*
 !.env.example
 
+# Private documents: the Business Requirements Document and its template stay local
+docs/brd/
+
 # Python
 __pycache__/
 *.py[cod]

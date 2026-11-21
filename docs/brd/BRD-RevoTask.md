@@ -4,9 +4,10 @@
 |---|---|
 | **Product** | RevoTask, a team task board (Kanban) for small teams |
 | **Document** | Business Requirements Document (BRD) |
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Date** | 21 November 2026 |
-| **Status** | Baselined. Built and tested; live deployment pending (see [Open items](#12-open-items)) |
+| **Status** | Deployed. Live checks and the demo account on the live database are open (see [Open items](#12-open-items)) |
+| **Live** | App: [https://jwrevotask.vercel.app](https://jwrevotask.vercel.app) · API: [https://revou-checkpoint-04.onrender.com](https://revou-checkpoint-04.onrender.com) |
 | **Owner** | Project owner (RevoU FSSE Module 4) |
 | **Source documents** | [`specs/brief.md`](../../specs/brief.md), [`specs/requirements.md`](../../specs/requirements.md) (R1–R53), [`specs/design.md`](../../specs/design.md), [`specs/tasks.md`](../../specs/tasks.md), [`specs/CHANGELOG.md`](../../specs/CHANGELOG.md) |
 
@@ -183,7 +184,7 @@ Priority uses MoSCoW: **M**ust, **S**hould, **C**ould. "Source" says where the n
 
 | ID | Area | Requirement | Fulfilled by |
 |---|---|---|---|
-| NFR-01 | Performance | API p95 latency under 500 ms; a card move updates exactly one row (FLOAT ordering). | R30 |
+| NFR-01 | Performance | API p95 latency under 500 ms; a card move updates exactly one row (FLOAT ordering); the web app's server functions run in the same region as the API (Singapore) and make each identical API call once per page load. | R30 |
 | NFR-02 | Security | Salted password hashes; JWT with expiry in an HttpOnly cookie; role checks on every route; HTML sanitised on the server; images re-encoded to AVIF with metadata stripped; images served only through signed links that expire in 1–2 hours; links limited to http and https. | R1, R32, R31, R40, R43, R47 |
 | NFR-03 | Privacy | Original uploads are never stored; EXIF data such as GPS location is removed. | R41, R43 |
 | NFR-04 | Accessibility | WCAG 2.2 AA intent: no serious or critical axe violations in either theme; keyboard access for every action; visible focus; reduced motion, reduced transparency, high contrast and forced colours respected; colour never the only signal. | R39, R51, R52 |
@@ -210,6 +211,7 @@ Priority uses MoSCoW: **M**ust, **S**hould, **C**ould. "Source" says where the n
 **Dependencies**
 
 - Pillow (AVIF encoding), nh3 (HTML sanitising), TipTap (rich-text editor), Flask-JWT-Extended, SQLAlchemy and Alembic, Next.js 16 and React 19, Tailwind CSS 4.
+- Runtimes and toolchain (21 November 2026): Python 3.13 with Gunicorn 27 on Render; Node.js 26 on Vercel (pinned with `engines`); TypeScript 6.0 and ESLint 10. TypeScript 7 waits for `typescript-eslint` support (D17).
 - Library behaviour was checked against current documentation (Context7) during the build.
 
 ## 9. Key decisions and trade-offs
@@ -230,6 +232,10 @@ Priority uses MoSCoW: **M**ust, **S**hould, **C**ould. "Source" says where the n
 | D12 | **Tide clock** above the profile, tied to the sidebar's wave decoration. | A clock bottom-right. | Bottom-right is where the last column and the dock are; the tide makes it part of the design. |
 | D13 | **No due-date reminders** yet. | Scheduled reminders. | Needs a scheduled job and a delivery channel (email or push); the free web service sleeps when idle. |
 | D14 | **Quiet scrollbars**: hidden where the browser can show faded edges instead; thin scrollbar elsewhere. | Always-visible scrollbars. | Owner's request for a cleaner look, while still signalling more content. |
+| D15 | **Speed through location, not an API cache**: Vercel functions in `sin1` next to the Render API; identical calls deduplicated within one page load. | A shared response cache in Flask (or Redis). | Measured first: the API answered in about 0.1 s, but Vercel ran the server functions in Washington, so each server call crossed the Pacific twice. A shared cache would risk stale boards and permissions across two Gunicorn workers for a few milliseconds of database time. |
+| D16 | **ESLint 10**, with `overrides` letting three Next.js-bundled plugins run on it. | Stay on ESLint 9. | A rule-by-rule trial showed identical findings on ESLint 9 and 10, a clean codebase, a clean `npm ci` and a working build; ESLint 9 is out of support. |
+| D17 | **TypeScript 6.0, not 7.0**, for now. | TypeScript 7; running 6 and 7 side by side. | TypeScript 7 type-checked, built and passed the tests, but `typescript-eslint` refuses it; the side-by-side scheme only adds a second compiler. |
+| D18 | **The live demo account is created by running `seed_demo.py` once against Supabase**, not on every deploy. | Seed in Render's build command. | Keeps deploys free of data changes; the script is safe to rerun if needed. |
 
 ## 10. Owner requests and how they were resolved
 
@@ -267,6 +273,15 @@ Every change the owner asked for during the build, in order. "Adapted" means the
 | 28 | "Animate background" shows no animation; turn it on by default. | Done | Motion made visible; still paused by reduced motion or the toggle. | 27 |
 | 29 | Write this BRD as a reusable document and update the README. | Done | This document and `BRD-template.md`. | 27 |
 | 30 | Use Render for the backend (keeping Gunicorn) and Vercel for the frontend instead. | Done | `render.yaml`, `gunicorn.conf.py`, session-pooler connection pool; database stays on Supabase (D1). | 28 |
+| 31 | Do we need a Procfile? | Declined | Render reads the start command from `render.yaml`; a Procfile is a Heroku/Railway convention and would be a second place to change it. | — |
+| 32 | Deploy error: `JWT_SECRET_KEY is not set`. | Done | The key had been added as a Render *Secret File*, not an environment variable. Startup errors now say how to fix them locally and on Render, and the API refuses to start on Render without `DATABASE_URL`. | — |
+| 33 | Put the deployed URLs in the README. | Done | App and API links, health check, a note on the free plan's sleep. | — |
+| 34 | Is the demo account available on the live site? | Explained | Not until `seed_demo.py` runs once against Supabase (D18, OI-1). | — |
+| 35 | "Can't reach RevoTask" on the live site. | Done | `FRONTEND_ORIGIN` ended with `/`, so CORS rejected the browser's origin; the API now ignores a trailing slash. | — |
+| 36 | Add an API cache for faster loading. | Adapted | Region co-location and per-request deduplication instead (D15). | 29 |
+| 37 | npm warnings during install. | Explained | All from development tools (Jest, ESLint) or the build machine; none reach the website. | — |
+| 38 | Update all dependencies (checked with Context7). | Done, partly | Gunicorn 27, React 19.3.1, Tailwind 4.3.5, TypeScript 6.0, ESLint 10, `@types/node` 26 with `engines` 26.x; TypeScript 7 deferred (D16, D17). | 30 |
+| 39 | Update the README and this BRD. | Done | Version 1.1 of this document. | — |
 
 ## 11. Risks
 
@@ -278,21 +293,24 @@ Every change the owner asked for during the build, in order. "Adapted" means the
 | RK4 | Newer browser features unsupported in some browsers. | Medium | Low | Every feature has a fallback (thin scrollbars, no fades, instant transitions). |
 | RK5 | Optimistic moves diverge from the server under poor connections. | Low | Medium | Moves revert with a toast on failure; reload shows the saved state. |
 | RK6 | FLOAT ordering runs out of precision after many inserts between the same two cards. | Low | Low | Accepted for this scope; renumbering is a follow-up. |
+| RK7 | A future release of the React, import or jsx-a11y ESLint plugins misbehaves on ESLint 10 before declaring support. | Low | Low | The plugins are pinned through `eslint-config-next` 16.4.6; recheck with the probe file before upgrading them, and remove `overrides` once they declare ESLint 10. |
+| RK8 | A wrong environment setting on Render or Vercel (secret in the wrong place, origin with a slash) breaks the live site. | Medium | High | Startup errors name the missing setting and how to fix it; origins are normalised; the README lists every variable. |
 
 ## 12. Open items
 
 | ID | Item | Owner | Needed for |
 |---|---|---|---|
-| OI-1 | Create the Supabase project; deploy the API on Render from `render.yaml` (the build applies migrations) and the web app on Vercel; run `scripts/seed_demo.py` once against Supabase. | Project owner | O1 |
+| OI-1 | Deployment: done (API https://revou-checkpoint-04.onrender.com, app https://jwrevotask.vercel.app). Remaining: run `scripts/seed_demo.py` once against Supabase, and push the latest commits (CORS fix, region setting, dependency updates). | Project owner | O1 |
 | OI-2 | Run the latency check (task 19.5) and the Playwright suite (task 20.4) against the live URLs; commit the report. | Project owner | O1, O4 |
 | OI-3 | Decide on due-date reminders (needs a scheduler, e.g. a Render cron job or Supabase scheduled functions, and an email or push channel). | Project owner | Future release |
+| OI-4 | Upgrade to TypeScript 7 when `typescript-eslint` supports it; remove the ESLint `overrides` when the bundled plugins declare ESLint 10. | Project owner | Maintenance |
 
 ## 13. Acceptance and sign-off
 
 The product is accepted when:
 
-1. Every "Must" business requirement is fulfilled and its linked requirements pass their tests (currently 143 backend tests, 131 frontend tests and 17 end-to-end tests, all passing locally).
-2. OI-1 and OI-2 are closed: the live site passes the Playwright suite and the API's p95 latency is under 500 ms.
+1. Every "Must" business requirement is fulfilled and its linked requirements pass their tests (currently 147 backend tests, 131 frontend tests and 17 end-to-end tests, all passing locally).
+2. OI-1 and OI-2 are closed: the demo account exists on the live site, the live site passes the Playwright suite, and the API's p95 latency is under 500 ms.
 3. The README, specs, guidelines and this BRD are current.
 
 | Role | Name | Decision | Date |
