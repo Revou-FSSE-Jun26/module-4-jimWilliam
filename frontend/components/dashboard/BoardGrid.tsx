@@ -9,6 +9,7 @@ import { BaseBadge } from "@/components/shared/BaseBadge";
 import { BaseButton } from "@/components/shared/BaseButton";
 import { BaseModal } from "@/components/shared/BaseModal";
 import { BoardColorPicker } from "@/components/shared/BoardColorPicker";
+import { DeadlineChip } from "@/components/shared/DeadlineChip";
 import { useAuth } from "@/context/AuthContext";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useSpecularHighlight } from "@/hooks/useSpecularHighlight";
@@ -32,6 +33,7 @@ export function BoardGrid({ initialBoards }: { initialBoards: Board[] }) {
   const [name, setName] = useState("");
   const [purpose, setPurpose] = useState("");
   const [hue, setHue] = useState<number | null>(null);
+  const [due, setDue] = useState("");
   const [pending, setPending] = useState(false);
 
   async function create(event: FormEvent) {
@@ -42,12 +44,13 @@ export function BoardGrid({ initialBoards }: { initialBoards: Board[] }) {
       const board = await apiClient<Board>("/api/boards", {
         method: "POST",
         token,
-        body: { name: name.trim(), purpose: purpose.trim() || null, color_hue: hue },
+        body: { name: name.trim(), purpose: purpose.trim() || null, color_hue: hue, ...(due ? { due_date: due } : {}) },
       });
       setBoards((list) => [board, ...list]);
       setName("");
       setPurpose("");
       setHue(null);
+      setDue("");
       setOpen(false);
       notify.success(`Board "${board.name}" created`);
       router.refresh(); // updates the Boards group in the Nav_Tree
@@ -73,6 +76,10 @@ export function BoardGrid({ initialBoards }: { initialBoards: Board[] }) {
             placeholder="What should this board achieve? For example: Launch the new site by 12 December"
             className="field-input min-h-0! py-2.5!"
           />
+        </div>
+        <div className="grid gap-1.5">
+          <label htmlFor="new-board-due" className="text-sm font-medium">Deadline <span className="font-normal text-muted">(optional)</span></label>
+          <input id="new-board-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input min-h-11! w-auto! py-2!" />
         </div>
         {/* A new board has no id yet, so "Automatic" previews the first palette colour. */}
         <BoardColorPicker value={hue} onChange={setHue} autoHue={BOARD_COLORS[3].hue} />
@@ -122,6 +129,7 @@ export function BoardGrid({ initialBoards }: { initialBoards: Board[] }) {
                 <BaseBadge color={board.role === "admin" ? "info" : "neutral"}>{board.role === "admin" ? "Admin" : "Member"}</BaseBadge>
               </span>
               {board.purpose && <span className="line-clamp-2 text-sm text-muted [overflow-wrap:anywhere]">{board.purpose}</span>}
+              {board.due_date && <DeadlineChip value={board.due_date} />}
               <span className="mt-auto flex flex-wrap gap-2 text-sm text-muted">
                 <span className="rounded-pill border border-rim px-2.5 py-0.5">{plural(board.card_count ?? 0, "open card")}</span>
                 <span className="rounded-pill border border-rim px-2.5 py-0.5">{plural(board.member_count ?? 1, "member")}</span>

@@ -127,6 +127,7 @@ describe("Property 39: preference cookie round trip (R36.5, R36.6)", () => {
     theme: fc.constantFrom("system", "light", "dark"),
     animateBg: fc.boolean(),
     reduceTransparency: fc.boolean(),
+    sidebarCollapsed: fc.boolean(),
   });
 
   it("parse(serialize(p)) === p", () => {
@@ -139,6 +140,7 @@ describe("Property 39: preference cookie round trip (R36.5, R36.6)", () => {
       expect(["system", "light", "dark"]).toContain(prefs.theme);
       expect(typeof prefs.animateBg).toBe("boolean");
       expect(typeof prefs.reduceTransparency).toBe("boolean");
+      expect(typeof prefs.sidebarCollapsed).toBe("boolean");
     }), RUNS);
   });
 });

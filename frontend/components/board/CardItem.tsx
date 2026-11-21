@@ -4,6 +4,7 @@ import { ViewTransition, useEffect, useRef, type CSSProperties, type DragEvent }
 
 import { MoveControl } from "@/components/board/MoveControl";
 import { Avatar } from "@/components/layout/Avatar";
+import { DueChip } from "@/components/shared/DueChip";
 import { useSpecularHighlight } from "@/hooks/useSpecularHighlight";
 import type { Card, Column } from "@/lib/types";
 
@@ -11,6 +12,8 @@ export interface CardItemProps {
   card: Card;
   columns: Pick<Column, "id" | "name">[];
   dragging: boolean;
+  /** The card is in the board's last column, so it is done and never shown as overdue. */
+  done?: boolean;
   focusMove: boolean;
   style?: CSSProperties;
   onOpen: (card: Card) => void;
@@ -23,7 +26,7 @@ export interface CardItemProps {
  * A Kanban card: a Glass_Pebble (no blur) inside the blurred column. Wrapped in a named
  * <ViewTransition> so a move morphs it to its new slot (R37.7).
  */
-export function CardItem({ card, columns, dragging, focusMove, style, onOpen, onMove, onDragStart, onDragEnd }: CardItemProps) {
+export function CardItem({ card, columns, dragging, done = false, focusMove, style, onOpen, onMove, onDragStart, onDragEnd }: CardItemProps) {
   const onPointerMove = useSpecularHighlight<HTMLElement>();
   const moveRef = useRef<HTMLSelectElement>(null);
 
@@ -59,6 +62,7 @@ export function CardItem({ card, columns, dragging, focusMove, style, onOpen, on
         >
           <span className="line-clamp-2">{card.title}</span>
         </button>
+        {card.due_date && <DueChip value={card.due_date} done={done} className="mt-2" />}
         <div className="card-meta relative mt-2 items-center gap-3 text-sm text-muted">
           {card.assignee ? (
             <span className="inline-flex min-w-0 items-center gap-1.5">

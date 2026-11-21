@@ -18,7 +18,8 @@ MAX_NOTES_TEXT = 20_000
 
 def create_board(user_id, payload) -> Board:
     data = BoardNameSchema().load(payload or {})
-    board = Board(name=data["name"], purpose=data.get("purpose"), color_hue=data.get("color_hue"), created_by=user_id)
+    board = Board(name=data["name"], purpose=data.get("purpose"), color_hue=data.get("color_hue"),
+                  due_date=data.get("due_date"), created_by=user_id)
     db.session.add(board)
     db.session.flush()
     db.session.add(BoardMember(board_id=board.id, user_id=user_id, role="admin"))
@@ -91,7 +92,7 @@ def rename_board(board_id, user_id, payload) -> Board:
     membership = require_member(board_id, user_id, admin=True)
     data = BoardUpdateSchema().load(payload or {})
     board = get_board_or_404(board_id)
-    for key in ("name", "purpose", "color_hue"):
+    for key in ("name", "purpose", "color_hue", "due_date"):
         if key in data:
             setattr(board, key, data[key])
     db.session.commit()

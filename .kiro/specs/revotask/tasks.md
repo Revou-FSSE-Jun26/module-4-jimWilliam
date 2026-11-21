@@ -778,6 +778,39 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - `__tests__/board-settings.test.tsx`, `e2e/board-brief.spec.ts`
     - **Validates: Requirements 49.2**
 
+- [x] 28. Due dates, cleaner columns, dialogs, colours, collapsible sidebar and smoother entrances (refinement round v4)
+  - [x] 28.1 Add `due_date` to cards and boards (migration, schemas) with tests
+    - **Property 53: Due dates round trip as calendar dates**
+    - **Validates: Requirements 51.1**
+
+  - [x] 28.2 Build `lib/due.ts`, DueChip and DeadlineChip; due date in the card detail, cards, My Tasks, settings, New board, Top_Bar and tiles
+    - **Property 54: Due status follows the calendar**
+    - **Validates: Requirements 51.2, 51.3, 51.4**
+
+  - [x] 28.3 Replace the inline column form with the "+" tile and AddColumnDialog; share `createColumnAt`
+    - _Requirements: 49.7_
+
+  - [x] 28.4 Drag to reorder columns in settings
+    - **Property 56: Moving an item keeps every item once**
+    - **Validates: Requirements 49.6**
+
+  - [x] 28.5 Custom board colour: hue slider and system colour picker through OKLCH
+    - **Property 55: Picking a colour keeps its hue**
+    - **Validates: Requirements 48.4**
+
+  - [x] 28.6 One scroller per dialog; every dialog a bottom sheet on phones
+    - _Requirements: 52.1, 52.2_
+
+  - [x] 28.7 Collapsible sidebar stored in the prefs cookie
+    - _Requirements: 53.1, 53.2, 53.3_
+
+  - [x] 28.8 Slower, smoother staggered entrances
+    - _Requirements: 37.3_
+
+  - [x] 28.9 Write component and end-to-end tests
+    - `__tests__/due-color-drag.test.tsx`, `e2e/due-and-collapse.spec.ts`; the Kanban journey adds columns through the "+" tile
+    - _Requirements: 49.6, 49.7, 51.2, 53.2_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
@@ -825,7 +858,9 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 27, "tasks": ["26.4", "27.1", "27.7"]},
     {"id": 28, "tasks": ["27.2"]},
     {"id": 29, "tasks": ["27.3", "27.4", "27.5", "27.6"]},
-    {"id": 30, "tasks": ["27.8"]}
+    {"id": 30, "tasks": ["27.8", "28.1", "28.5", "28.6", "28.8"]},
+    {"id": 31, "tasks": ["28.2", "28.3", "28.4", "28.7"]},
+    {"id": 32, "tasks": ["28.9"]}
   ]
 }
 ```

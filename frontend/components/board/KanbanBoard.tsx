@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
+import { AddColumnDialog } from "@/components/board/AddColumnDialog";
 import { AnalyticsPanel } from "@/components/board/AnalyticsPanel";
 import { BoardBrief } from "@/components/board/BoardBrief";
 import { BoardSettings } from "@/components/board/BoardSettings";
@@ -14,6 +15,7 @@ import { Field } from "@/components/forms/Field";
 import { PageHeader, useShell } from "@/components/layout/AppShell";
 import { BaseButton } from "@/components/shared/BaseButton";
 import { BaseModal } from "@/components/shared/BaseModal";
+import { DeadlineChip } from "@/components/shared/DeadlineChip";
 import { useAuth } from "@/context/AuthContext";
 import { useDragAndDrop, type BoardColumn } from "@/hooks/useDragAndDrop";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
@@ -45,13 +47,13 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<BoardColumn | null>(null);
-  const [newColumn, setNewColumn] = useState("");
+  const [addingColumn, setAddingColumn] = useState(false);
   const isAdmin = board.role === "admin";
   const dnd = useDragAndDrop(columns, setColumns);
 
   // The staggered reveal plays once, on first load only (R37.3).
   useEffect(() => {
-    const id = setTimeout(() => setFirstLoad(false), 700);
+    const id = setTimeout(() => setFirstLoad(false), 1600);
     return () => clearTimeout(id);
   }, []);
 
@@ -98,18 +100,6 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
     [token, handleError],
   );
 
-  async function addColumn(event: FormEvent) {
-    event.preventDefault();
-    if (!newColumn.trim()) return;
-    try {
-      const column = await apiClient<Column>(`/api/boards/${board.id}/columns`, { method: "POST", token, body: { name: newColumn.trim() } });
-      setColumns((cols) => [...cols, { ...column, cards: [] }]);
-      setNewColumn("");
-    } catch (err) {
-      handleError(err);
-    }
-  }
-
   const updateCard = useCallback((card: Card) => {
     setColumns((cols) => cols.map((c) => ({ ...c, cards: c.cards.map((x) => (x.id === card.id ? { ...x, ...card } : x)) })));
     setOpenCard((open) => (open && open.id === card.id ? { ...open, ...card } : open));
@@ -133,12 +123,17 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
           </span>
         }
         subtitle={
-          board.purpose ? (
-            <button type="button" onClick={() => setBriefOpen(true)} className="board-purpose" title={board.purpose}>
+          board.purpose || board.due_date ? (
+            <span className="flex min-w-0 items-center gap-2">
+              {board.purpose && (
+            <button type="button" onClick={() => setBriefOpen(true)} className="board-purpose min-w-0" title={board.purpose}>
               <svg aria-hidden="true" viewBox="0 0 24 24" className="size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /></svg>
               <span className="visually-hidden">Purpose: </span>
               <span className="truncate">{board.purpose}</span>
             </button>
+              )}
+              {board.due_date && <DeadlineChip value={board.due_date} />}
+            </span>
           ) : (
             isAdmin ? "You are an admin of this board" : "You are a member of this board"
           )
@@ -183,6 +178,7 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
             column={column}
             columns={columnOptions}
             index={i}
+            isDone={columns.length >= 2 && i === columns.length - 1}
             firstLoad={firstLoad}
             draggingCardId={dnd.drag.cardId}
             dropIndex={dnd.drag.overColumnId === column.id ? dnd.drag.overIndex : null}
@@ -198,11 +194,17 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
             onDrop={dnd.onColumnDrop}
           />
         ))}
-        <form onSubmit={addColumn} className="kanban-column kanban-add glass-pane enter grid content-start gap-3 border-dashed p-4" aria-label="Add a column">
-          <h2 className="text-lg">Add a column</h2>
-          <Field label="Column name" value={newColumn} onChange={(e) => setNewColumn(e.target.value)} maxLength={120} />
-          <BaseButton type="submit" variant="secondary" disabled={!newColumn.trim()}>Add column</BaseButton>
-        </form>
+        <button
+          type="button"
+          onClick={() => setAddingColumn(true)}
+          className="kanban-add-tile enter"
+          data-empty={columns.length === 0 || undefined}
+          aria-label="Add a column"
+          title="Add a column"
+        >
+          <span aria-hidden="true" className="kanban-add-plus">+</span>
+          {columns.length === 0 && <span className="text-sm font-medium">Add your first column</span>}
+        </button>
       </div>
       <KanbanNavigator rowRef={rowRef} columns={navColumns} />
       </div>
@@ -213,6 +215,15 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
         onClose={() => setBriefOpen(false)}
         onNotesSaved={(notes) => setBoard((b) => ({ ...b, notes }))}
         onEditSettings={isAdmin ? () => { setBriefOpen(false); setSettingsOpen(true); } : undefined}
+      />
+
+      <AddColumnDialog
+        open={addingColumn}
+        boardId={board.id}
+        columns={columns}
+        onClose={() => setAddingColumn(false)}
+        onAdded={setColumns}
+        onManage={isAdmin ? () => { setAddingColumn(false); setSettingsOpen(true); } : undefined}
       />
 
       <CardDetailModal card={openCard} boardId={board.id} role={board.role} onClose={closeCard} onUpdated={updateCard} onDeleted={deleteCard} />

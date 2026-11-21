@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/AppShell";
+import { DueChip } from "@/components/shared/DueChip";
 import { BaseBadge } from "@/components/shared/BaseBadge";
 import { BaseButton } from "@/components/shared/BaseButton";
 import { useAuth } from "@/context/AuthContext";
@@ -100,6 +101,7 @@ export default function MyTasksPage() {
                       >
                         <span className="block font-medium [overflow-wrap:anywhere]">{card.title}</span>
                         {card.description_text && <span className="mt-1 line-clamp-2 block text-sm text-muted">{card.description_text}</span>}
+                        {card.due_date && <DueChip value={card.due_date} className="mt-2" />}
                         <span className="mt-2 block text-sm text-muted">{card.assignee ? `Assigned to ${card.assignee.name}` : "Unassigned"}</span>
                       </Link>
                     </li>

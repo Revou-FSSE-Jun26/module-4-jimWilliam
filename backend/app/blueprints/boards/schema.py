@@ -23,6 +23,7 @@ class BoardNameSchema(Schema):
     name = fields.String(required=True, validate=validate.Length(min=1, max=120))
     purpose = fields.String(allow_none=True, validate=validate.Length(max=280))
     color_hue = fields.Integer(allow_none=True, strict=True, validate=validate.Range(min=0, max=359))
+    due_date = fields.Date(allow_none=True)   # the board's deadline, "YYYY-MM-DD" (R51)
 
     @pre_load
     def strip(self, data, **kwargs):
@@ -40,7 +41,7 @@ class BoardUpdateSchema(BoardNameSchema):
     @validates_schema
     def not_empty(self, data, **kwargs):
         if not data:
-            raise ValidationError("Send at least one of name, purpose or color_hue")
+            raise ValidationError("Send at least one of name, purpose, color_hue or due_date")
 
 
 class BoardNotesSchema(Schema):
@@ -92,6 +93,7 @@ class BoardSchema(Schema):
     name = fields.String()
     purpose = fields.String(allow_none=True)
     color_hue = fields.Integer(allow_none=True)
+    due_date = fields.Date(allow_none=True)
     created_by = fields.UUID(allow_none=True)
     role = fields.String()            # the requesting user's role, attached by the service
     member_count = fields.Integer()

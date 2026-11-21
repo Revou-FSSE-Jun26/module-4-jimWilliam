@@ -12,6 +12,8 @@ export interface ColumnViewProps {
   column: BoardColumn;
   columns: { id: string; name: string }[];
   index: number;
+  /** The last column of a board with two or more: its cards count as done (R46, R51). */
+  isDone?: boolean;
   firstLoad: boolean;
   draggingCardId: string | null;
   dropIndex: number | null;
@@ -27,7 +29,7 @@ export interface ColumnViewProps {
   onDrop: (event: DragEvent, columnId: string) => void;
 }
 
-const MAX_STAGGER = 9; // 9 x 40 ms + 240 ms keeps the first-load reveal under 600 ms (R37.3)
+const MAX_STAGGER = 9; // 9 x 75 ms + 620 ms: the first-load reveal settles in about 1.3 s (R37.3)
 
 export function ColumnView(props: ColumnViewProps) {
   const { column, columns, index, firstLoad, draggingCardId, dropIndex, focusCardId } = props;
@@ -76,6 +78,7 @@ export function ColumnView(props: ColumnViewProps) {
                 card={card}
                 columns={columns}
                 dragging={draggingCardId === card.id}
+                done={props.isDone}
                 focusMove={focusCardId === card.id}
                 style={stagger(index + i + 1)}
                 onOpen={props.onOpenCard}

@@ -531,7 +531,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 
 1. THE Frontend SHALL animate only `opacity`, `translate`, `scale` and `rotate`, plus a brief `filter` blur on full-screen sheet movements, and SHALL NOT animate layout properties, `box-shadow` or `backdrop-filter`.
 2. WHEN a form field, Card, Column, Board tile, Comment or list item first appears, THE Frontend SHALL fade and rise it into place using `@starting-style`.
-3. WHEN a Board page first loads, THE Kanban SHALL reveal Columns and then Cards as one staggered sequence that finishes within 600 ms.
+3. WHEN a Board page first loads, THE Kanban SHALL reveal Columns and then Cards as one staggered sequence (75 ms apart, each rising over 620 ms with a soft deceleration) that settles within about 1.3 s; with reduced motion it SHALL be a short fade with no stagger.
 4. WHEN a BaseModal, popover or menu opens or closes, THE Frontend SHALL animate its opacity and scale from the side that touches its trigger, and SHALL keep it in the top layer until the closing animation ends.
 5. WHEN a pointer hovers a Card, Board tile or BaseButton on a device with hover, THE element SHALL lift with a stronger shadow layer, and Cards and Board tiles SHALL show a highlight that follows the pointer.
 6. WHEN a User presses a Card, Board tile or BaseButton, THE element SHALL scale down slightly until release.
@@ -680,6 +680,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 1. THE Backend SHALL store an optional `color_hue` from 0 to 359 for each Board, reject other values (including non-integers) with status 400, and accept null to return to the automatic colour.
 2. THE "New board" form and Board settings SHALL offer the colour as a radio group of eight named colours plus "Automatic" (the hue derived from the Board id).
 3. THE Board colour SHALL be used for the Nav_Tree dot and progress liquid (R46), the dot before the board title, and a wash on the dashboard tile.
+4. THE colour picker SHALL also offer "Custom": a hue slider and the system colour picker. Any picked colour SHALL be reduced to its OKLCH hue and shown at the fixed lightness and chroma; greys, black and white SHALL be refused with a message, because they have no hue.
 
 ### Requirement 49: Managing columns from Board settings
 
@@ -692,6 +693,8 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 3. Board settings SHALL let the admin add a Column at the start, after any Column, or at the end.
 4. WHEN the admin deletes a Column from Board settings, THE Frontend SHALL first ask for confirmation naming the number of cards that will be deleted.
 5. Changes made in Board settings SHALL appear on the Kanban at once, without a reload.
+6. Board settings SHALL also let the admin reorder Columns by dragging a row by its grip, with a drop line showing where it will land; the arrow buttons remain for keyboard users.
+7. THE Kanban SHALL end with a slim "+" tile instead of an inline form; it SHALL open an "Add a column" dialog with a name and a position, available to every Board_Member, with a link to the full manager for Board_Admins.
 
 ### Requirement 50: Brand mark
 
@@ -701,3 +704,33 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 
 1. THE Frontend SHALL use the RevoTask mark from `docs/assets/logo.svg` as `app/icon.svg`, a 16/32/48 px `favicon.ico` and a 180 px `apple-icon.png`.
 2. THE Sidebar and Nav_Drawer brand and the auth pages SHALL show the same mark as an inline SVG next to the "RevoTask" name, hidden from assistive technology because the name is next to it.
+
+### Requirement 51: Due dates for cards and boards
+
+**User Story:** As a User, I want cards and boards to have due dates, so that I see what is late or coming up and the board has a target date.
+
+#### Acceptance Criteria
+
+1. THE Backend SHALL store an optional `due_date` (a calendar date, "YYYY-MM-DD", no time zone) on Cards and Boards, accept it on create and update, return it in every Card and Board shape, and reject anything that is not a real date with status 400.
+2. THE Card detail SHALL let a member set and clear the due date; THE Card on the Kanban and in My Tasks SHALL show a chip: overdue (danger colour, "N days overdue"), due today or within two days (amber), later (muted), and done for Cards in the last Column (never shown as overdue). The tone SHALL also be stated in words.
+3. Board settings and the New board form SHALL let an admin set the board deadline; THE board's Top_Bar and dashboard tile SHALL show it as "12 Dec · 21 days left" or "N days overdue".
+4. Days left SHALL be counted in calendar days of the reader's local date, unaffected by daylight-saving changes.
+
+### Requirement 52: Dialogs scroll once and fit every screen
+
+**User Story:** As a User, I want dialogs to scroll smoothly in one place and fit my phone, so that long settings are easy to use.
+
+#### Acceptance Criteria
+
+1. EVERY BaseModal SHALL have exactly one scrolling area, its body, below a fixed header; the dialog itself SHALL NOT scroll. The body SHALL use the quiet scrolling of R44.5 (hidden scrollbar with faded edges where supported).
+2. Below 768 px, EVERY BaseModal SHALL open as a bottom sheet across the full width, at most 92% of the viewport tall, respecting the bottom safe area; wide dialogs SHALL be up to 52rem on larger screens.
+
+### Requirement 53: Collapsible sidebar
+
+**User Story:** As a User on a wide screen, I want to collapse the sidebar, so that the board gets more room when I need it.
+
+#### Acceptance Criteria
+
+1. WHILE the viewport is at least 1280 px wide, THE Sidebar SHALL show a collapse button that switches between the full Sidebar and the icon rail of R35.2, with `aria-expanded` and an accessible name naming the action ("Collapse sidebar" or "Expand sidebar").
+2. THE choice SHALL be stored in the `revotask_prefs` cookie and rendered on `<html>` as `data-sidebar`, so a reload paints the chosen width with no flash; older cookies without the value SHALL parse as expanded.
+3. WHEN the Sidebar collapses or expands, its width, the page padding and the Kanban row SHALL glide over about 380 ms, unless reduced motion is requested.

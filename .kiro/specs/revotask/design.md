@@ -537,6 +537,16 @@ With a photo (R41.4), the Avatar renders the AVIF through ProtectedImage inside 
 
 `components/layout/LogoMark.tsx` is the logo artwork as inline SVG with gradient ids from `useId` (the mark can appear twice on a page). `app/icon.svg` is the same file; `favicon.ico` (16, 32, 48 px) and `apple-icon.png` (180 px on the deep-water colour) were rendered from it. Next.js adds the `<link rel="icon">` tags from these files.
 
+### Due dates, dialogs, columns and the collapsible sidebar (R48.4, R49.6–R49.7, R51–R53)
+
+- **Due dates.** `cards.due_date` and `boards.due_date` are SQL `DATE` columns; marshmallow `fields.Date` accepts only real "YYYY-MM-DD" dates. `lib/due.ts` parses them as local dates, counts calendar days with `Date.UTC` of each local date (so daylight-saving shifts never change the count), and maps them to tones: done (Card in the last Column), overdue (< 0), today (0), soon (1–2 days), later. `DueChip` and `DeadlineChip` render only on the client (`useNow`), because "today" is the reader's today, and carry the tone in visually hidden text as well as colour.
+- **"+" tile and add dialog.** The inline form at the end of the Kanban is replaced by a 3.5rem dashed tile (wider with "Add your first column" on an empty board) that opens `AddColumnDialog`. It and the settings manager share `createColumnAt` (POST, then one renumbered reorder when the new column is not last) and `insertIndex`.
+- **Dragging columns in settings.** Native HTML5 drag on the row, armed only from the grip (`pointerdown` sets `draggable` on that row), so text in the name field can still be selected. `dragover` picks before or after from the pointer's position against the row's middle and draws a drop line; `drop` uses `moveItem` and one reorder request. The arrow buttons stay for keyboard and touch.
+- **Custom colour.** `lib/oklch.ts` converts sRGB to OKLab (Björn Ottosson's matrices) for `hueFromHex` and back for `hexFromHue`, so the native colour input shows the colour the board will really use. Chroma below 0.02 is treated as grey and refused. The slider's track is the hue wheel at the board lightness and chroma.
+- **Dialogs.** `dialog.base-modal` is `overflow: hidden` (user agents give modal dialogs `overflow: auto`, which was the second scrollbar), `.modal-frame` is a flex column with `max-block-size: inherit`, and `.modal-body` is the only scroller, with the same scroll-driven edge fades as the Nav_Tree and card lists (no `backdrop-filter` inside, so the mask is safe). `sheet` is now on by default, so every dialog is a bottom sheet below 768 px; `wide` dialogs are up to 52rem.
+- **Collapsible sidebar.** The fourth part of the prefs cookie is `sidebarCollapsed`; `htmlAttributes` renders `data-sidebar`. Every rail rule from the 768–1279 px media query is repeated under `@media (width >= 80rem)` with `:root[data-sidebar="collapsed"]` in front (generated once, so both stay identical), plus the width, padding and `--main-start` of the rail. NavTree treats "wide and collapsed" as rail, so the Boards group becomes a flyout. Width, page padding and the Kanban row's margins transition over 380 ms with `--ease-smooth`.
+- **Entrances.** `.enter` now rises 0.875rem with a 0.985 scale over `--dur-enter` (620 ms) with `--ease-smooth` (`cubic-bezier(0.22, 1, 0.36, 1)`), and each step of the stagger is `--stagger` (75 ms). The board keeps its first-load stagger for 1.6 s so late items still get their delay.
+
 ### Tide_Clock (R45)
 
 - `lib/tide.ts`: `tideLevel(date) = 0.5 + 0.5·cos(2π·(h − 15)/24)` (1 at 15:00, 0 at 03:00), `tideTrend` (rising from 03:00 to 15:00), `dayPart`, `clockParts` (24-hour or 12-hour with AM/PM).
@@ -829,6 +839,15 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 48.2, 48.3 | P3–P6 (BoardColorPicker, Nav_Tree, tiles, Top_Bar) |
 | 49.1–49.5 | P4 (ColumnManager; calls B8–B11) |
 | 50.1, 50.2 | P1–P6 (`app/icon.svg`, `favicon.ico`, `apple-icon.png`, LogoMark) |
+| 48.4 | P3, P4 (BoardColorPicker) |
+| 49.6 | P4 (ColumnManager drag) |
+| 49.7 | P4 ("+" tile, AddColumnDialog; calls B8, B9) |
+| 51.1 | B3, B4, B5, B6, B12, B13, B14 |
+| 51.2 | P4, P5 (CardDetailModal, CardItem, My Tasks) |
+| 51.3 | P3, P4 (New board, Board settings, Top_Bar, tiles) |
+| 51.4 | P3–P5 (`lib/due.ts`) |
+| 52.1, 52.2 | P1–P6 (BaseModal) |
+| 53.1–53.3 | P3–P6 (Sidebar, NavTree, prefs cookie) |
 
 ## Error Handling
 
@@ -1166,6 +1185,30 @@ For any submitted `color_hue`, the update succeeds and stores the value exactly 
 For any sequence of distinct column ids, `renumber` returns the same ids in the same order with positive, strictly increasing orders.
 
 **Validates: Requirements 49.2**
+
+### Property 53: Due dates round trip as calendar dates
+
+For any calendar date, setting it as a Card's or Board's `due_date` returns the same "YYYY-MM-DD" value.
+
+**Validates: Requirements 51.1**
+
+### Property 54: Due status follows the calendar
+
+For any local today and any offset in days, `dueStatus` reports that offset as `days`; done wins over everything; otherwise the tone is overdue below 0, today at 0, soon at 1–2 and later beyond, and an overdue label names the number of days.
+
+**Validates: Requirements 51.2, 51.4**
+
+### Property 55: Picking a colour keeps its hue
+
+For any hue from 0 to 359, the colour the picker shows for it reads back as the same hue within 3 degrees.
+
+**Validates: Requirements 48.4**
+
+### Property 56: Moving an item keeps every item once
+
+For any list of distinct items and any source and target positions, `moveItem` returns the same items, each once, with the moved item at the target position.
+
+**Validates: Requirements 49.6**
 
 ### Property 45: Editor links use only http, https or mailto
 

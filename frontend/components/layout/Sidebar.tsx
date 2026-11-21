@@ -6,6 +6,7 @@ import { LogoMark } from "@/components/layout/LogoMark";
 import { NavTree } from "@/components/layout/NavTree";
 import { ProfileMenu } from "@/components/layout/ProfileMenu";
 import { TideClock } from "@/components/layout/TideClock";
+import { usePrefsContext } from "@/context/PrefsContext";
 import { useNow } from "@/hooks/useNow";
 import { tideLevel } from "@/lib/tide";
 import type { Board } from "@/lib/types";
@@ -46,13 +47,27 @@ function Tide({ level }: { level: number | null }) {
  */
 export function Sidebar({ boards }: { boards: Board[] }) {
   const now = useNow();
+  const { prefs, update } = usePrefsContext();
+  const collapsed = prefs.sidebarCollapsed;
   return (
-    <aside className="sidebar glass-pane" aria-label="Sidebar">
+    <aside id="sidebar" className="sidebar glass-pane" aria-label="Sidebar">
       <span className="sidebar-rim" aria-hidden="true" />
       {/* Clipped by the sidebar's own curve (border-radius: inherit), behind the content. */}
       <span className="sidebar-tide-clip" aria-hidden="true"><Tide level={now === null ? null : tideLevel(new Date(now))} /></span>
-      <div className="sidebar-head">
+      <div className="sidebar-head flex items-center">
         <Brand compact />
+        {/* Wide screens only (R53): switch between the full sidebar and the icon rail; remembered in the prefs cookie. */}
+        <button
+          type="button"
+          className="sidebar-toggle"
+          onClick={() => update({ sidebarCollapsed: !collapsed })}
+          aria-expanded={!collapsed}
+          aria-controls="sidebar"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 7l-5 5 5 5M18 7l-5 5 5 5" /></svg>
+        </button>
       </div>
       <NavTree boards={boards} shell="sb" />
       <div className="sidebar-foot">

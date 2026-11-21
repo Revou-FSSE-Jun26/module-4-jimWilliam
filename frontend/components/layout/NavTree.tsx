@@ -6,11 +6,13 @@ import { ViewTransition, useCallback, useEffect, useMemo, useRef, useSyncExterna
 
 import { boardHue } from "@/lib/boardColor";
 import { boardProgress, progressLabel } from "@/lib/progress";
+import { usePrefsContext } from "@/context/PrefsContext";
 import { positionFallback } from "@/lib/polyfills";
 import type { Board } from "@/lib/types";
 
 const STORAGE_KEY = "revotask_nav";
 const RAIL_QUERY = "(min-width: 48rem) and (max-width: 79.999rem)";
+const WIDE_QUERY = "(min-width: 80rem)";
 
 type OpenState = Record<string, boolean>;
 const NAV_EVENT = "revotask-nav";
@@ -30,9 +32,9 @@ function subscribeStored(onChange: () => void) {
 }
 
 function subscribeRail(onChange: () => void) {
-  const mq = window.matchMedia(RAIL_QUERY);
-  mq.addEventListener("change", onChange);
-  return () => mq.removeEventListener("change", onChange);
+  const queries = [window.matchMedia(RAIL_QUERY), window.matchMedia(WIDE_QUERY)];
+  queries.forEach((mq) => mq.addEventListener("change", onChange));
+  return () => queries.forEach((mq) => mq.removeEventListener("change", onChange));
 }
 
 function Icon({ d }: { d: string }) {
@@ -103,7 +105,9 @@ export function NavTree({ boards, shell, onNavigate }: { boards: Board[]; shell:
   }, [stored]);
   // The rail layout only applies to the sidebar shell.
   const railMatches = useSyncExternalStore(subscribeRail, () => window.matchMedia(RAIL_QUERY).matches, () => false);
-  const rail = shell === "sb" && railMatches;
+  const wideMatches = useSyncExternalStore(subscribeRail, () => window.matchMedia(WIDE_QUERY).matches, () => false);
+  const { prefs } = usePrefsContext();
+  const rail = shell === "sb" && (railMatches || (wideMatches && prefs.sidebarCollapsed));
   const boardsListRef = useRef<HTMLUListElement>(null);
   const boardsTriggerRef = useRef<HTMLButtonElement>(null);
   const boardsListId = `${shell}-boards`;

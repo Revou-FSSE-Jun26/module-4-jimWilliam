@@ -36,6 +36,8 @@ export interface Card {
   description_text?: string | null;
   assignee_id: string | null;
   assignee: CardAssignee | null;
+  /** "YYYY-MM-DD" or null (R51). */
+  due_date?: string | null;
   order: number;
   comment_count?: number;
   attachment_count?: number;
@@ -60,6 +62,8 @@ export interface Board {
   purpose?: string | null;
   /** 0-359, or null for the colour derived from the id (R48). */
   color_hue?: number | null;
+  /** The board's deadline, "YYYY-MM-DD" or null (R51). */
+  due_date?: string | null;
   created_by: string | null;
   role: Role;
   member_count?: number;

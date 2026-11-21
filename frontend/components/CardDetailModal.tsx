@@ -42,6 +42,7 @@ function CardDetailBody({ card, boardId, role = "member", onUpdated, onDeleted }
   // The editor's HTML can differ from the sanitised HTML the API returns, so compare with what was last saved.
   const [savedDescription, setSavedDescription] = useState(card.description ?? "");
   const [assigneeId, setAssigneeId] = useState(card.assignee_id ?? "");
+  const [dueDate, setDueDate] = useState(card.due_date ?? "");
   const [members, setMembers] = useState<Member[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -56,7 +57,7 @@ function CardDetailBody({ card, boardId, role = "member", onUpdated, onDeleted }
     };
   }, [boardId, token, handleError]);
 
-  const dirty = (title.trim() !== card.title || description !== savedDescription || assigneeId !== (card.assignee_id ?? ""));
+  const dirty = (title.trim() !== card.title || description !== savedDescription || assigneeId !== (card.assignee_id ?? "") || dueDate !== (card.due_date ?? ""));
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -66,7 +67,7 @@ function CardDetailBody({ card, boardId, role = "member", onUpdated, onDeleted }
       const updated = await apiClient<Card>(`/api/cards/${card.id}`, {
         method: "PATCH",
         token,
-        body: { title: title.trim(), description: description || null, assignee_id: assigneeId || null },
+        body: { title: title.trim(), description: description || null, assignee_id: assigneeId || null, due_date: dueDate || null },
       });
       setSavedDescription(description);
       onUpdated({ ...updated, comment_count: card.comment_count, attachment_count: card.attachment_count });
@@ -107,6 +108,13 @@ function CardDetailBody({ card, boardId, role = "member", onUpdated, onDeleted }
                   <option key={m.user_id} value={m.user_id} className="bg-(--raised-solid)">{m.name}</option>
                 ))}
               </select>
+            </div>
+            <div className="grid gap-1.5">
+              <label htmlFor={`${ids}-due`} className="text-sm font-medium">Due date</label>
+              <div className="flex items-center gap-2">
+                <input id={`${ids}-due`} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="field-input min-h-11! w-auto! py-2!" />
+                {dueDate && <BaseButton size="sm" variant="ghost" onClick={() => setDueDate("")}>Clear</BaseButton>}
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <BaseButton type="submit" loading={saving} loadingLabel="Saving…" disabled={!dirty || !title.trim()}>Save card</BaseButton>

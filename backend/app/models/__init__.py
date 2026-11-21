@@ -38,6 +38,7 @@ class Board(db.Model):
     name = db.Column(db.String(120), nullable=False)
     purpose = db.Column(db.String(280), nullable=True)         # the board's goal, shown to every member (R47)
     color_hue = db.Column(db.Integer, nullable=True)           # 0-359; null = derived from the id (R48)
+    due_date = db.Column(db.Date, nullable=True)               # the board's deadline (R51)
     notes = db.Column(db.Text, nullable=True)                  # sanitised HTML, e.g. meeting notes (R47)
     notes_text = db.Column(db.Text, nullable=True)
     created_by = db.Column(db.Uuid, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -97,6 +98,7 @@ class Card(db.Model):
     description = db.Column(db.Text, nullable=True)            # sanitised HTML (R40)
     description_text = db.Column(db.Text, nullable=True)       # plain text for search and previews
     assignee_id = db.Column(db.Uuid, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    due_date = db.Column(db.Date, nullable=True)               # a calendar date, no time zone (R51)
     order = db.Column(db.Float, nullable=False)
     created_at = _created()
     updated_at = _updated()

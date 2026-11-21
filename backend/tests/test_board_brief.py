@@ -120,3 +120,30 @@ def test_property_51_board_colour_is_a_hue_or_nothing(client, owner, hue):
         assert res.status_code == 200 and res.get_json()["data"]["color_hue"] == hue
     else:
         assert res.status_code == 400
+
+
+# ----- due dates (R51) --------------------------------------------------------------------------
+
+def test_card_and_board_due_dates(client, owner):
+    card_url = f"/api/cards/{owner['card']['id']}"
+    res = client.patch(card_url, json={"due_date": "2026-12-12"}, headers=owner["headers"])
+    assert res.status_code == 200 and res.get_json()["data"]["due_date"] == "2026-12-12"
+    board = client.get(f"/api/boards/{owner['board']['id']}", headers=owner["headers"]).get_json()["data"]
+    assert board["columns"][0]["cards"][0]["due_date"] == "2026-12-12"
+    assert client.patch(card_url, json={"due_date": None}, headers=owner["headers"]).get_json()["data"]["due_date"] is None
+    for bad in ("12/12/2026", "2026-02-30", "tomorrow", 20261212):
+        assert client.patch(card_url, json={"due_date": bad}, headers=owner["headers"]).status_code == 400
+    created = client.post(f"/api/columns/{owner['todo']['id']}/cards", json={"title": "x", "due_date": "2027-01-05"}, headers=owner["headers"])
+    assert created.get_json()["data"]["due_date"] == "2027-01-05"
+    board_url = f"/api/boards/{owner['board']['id']}"
+    assert client.patch(board_url, json={"due_date": "2026-12-31"}, headers=owner["headers"]).get_json()["data"]["due_date"] == "2026-12-31"
+    listed = client.get("/api/boards", headers=owner["headers"]).get_json()["data"][0]
+    assert listed["due_date"] == "2026-12-31"
+
+
+# Feature: revotask, Property 53: Due dates round trip as calendar dates
+@given(day=st.dates(), board=st.booleans())
+def test_property_53_due_dates_round_trip(client, owner, day, board):
+    url = f"/api/boards/{owner['board']['id']}" if board else f"/api/cards/{owner['card']['id']}"
+    res = client.patch(url, json={"due_date": day.isoformat()}, headers=owner["headers"])
+    assert res.status_code == 200 and res.get_json()["data"]["due_date"] == day.isoformat()

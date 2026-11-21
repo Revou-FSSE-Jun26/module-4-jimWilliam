@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useId, useState, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
 
 import { Field } from "@/components/forms/Field";
 import { BaseButton } from "@/components/shared/BaseButton";
@@ -22,7 +22,7 @@ export interface BoardSettingsProps {
   board: Board;
   columns: BoardColumn[];
   onClose: () => void;
-  onSaved: (patch: Pick<Board, "name" | "purpose" | "color_hue">) => void;
+  onSaved: (patch: Pick<Board, "name" | "purpose" | "color_hue" | "due_date">) => void;
   onColumnsChange: (columns: BoardColumn[]) => void;
   onDeleted: () => void;
 }
@@ -62,6 +62,7 @@ function SettingsBody({ board, columns, onSaved, onColumnsChange, onDeleted }: O
   const [name, setName] = useState(board.name);
   const [purpose, setPurpose] = useState(board.purpose ?? "");
   const [hue, setHue] = useState<number | null>(board.color_hue ?? null);
+  const [due, setDue] = useState(board.due_date ?? "");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -69,6 +70,7 @@ function SettingsBody({ board, columns, onSaved, onColumnsChange, onDeleted }: O
   if (name.trim() !== board.name) patch.name = name.trim();
   if ((purpose.trim() || null) !== (board.purpose ?? null)) patch.purpose = purpose.trim() || null;
   if (hue !== (board.color_hue ?? null)) patch.color_hue = hue;
+  if ((due || null) !== (board.due_date ?? null)) patch.due_date = due || null;
   const dirty = Object.keys(patch).length > 0;
 
   async function save(event: FormEvent) {
@@ -77,7 +79,7 @@ function SettingsBody({ board, columns, onSaved, onColumnsChange, onDeleted }: O
     setSaving(true);
     try {
       const updated = await apiClient<Board>(`/api/boards/${board.id}`, { method: "PATCH", token, body: patch });
-      onSaved({ name: updated.name, purpose: updated.purpose ?? null, color_hue: updated.color_hue ?? null });
+      onSaved({ name: updated.name, purpose: updated.purpose ?? null, color_hue: updated.color_hue ?? null, due_date: updated.due_date ?? null });
       notify.success("Board settings saved");
     } catch (err) {
       handleError(err);
@@ -116,6 +118,14 @@ function SettingsBody({ board, columns, onSaved, onColumnsChange, onDeleted }: O
             Shown under the board title for every member. {PURPOSE_MAX - purpose.length} characters left.
           </p>
         </div>
+        <div className="grid gap-1.5">
+          <label htmlFor={`${ids}-due`} className="text-sm font-medium">Deadline <span className="font-normal text-muted">(optional)</span></label>
+          <div className="flex items-center gap-2">
+            <input id={`${ids}-due`} type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input min-h-11! w-auto! py-2!" />
+            {due && <BaseButton size="sm" variant="ghost" onClick={() => setDue("")}>Clear</BaseButton>}
+          </div>
+          <p className="text-xs text-muted">Shown beside the purpose with the days left, so the team sees the target date.</p>
+        </div>
         <BoardColorPicker value={hue} onChange={setHue} autoHue={avatarHue(board.id)} />
         <div>
           <BaseButton type="submit" loading={saving} loadingLabel="Saving…" disabled={!dirty || !name.trim()}>Save changes</BaseButton>
@@ -148,6 +158,36 @@ function without(map: Record<string, string>, key: string): Record<string, strin
   return next;
 }
 
+/** Where a new column goes: "start", "end", or after the column with this id. */
+export function insertIndex(columns: { id: string }[], position: string): number {
+  if (position === "start") return 0;
+  const after = columns.findIndex((c) => c.id === position);
+  return after === -1 ? columns.length : after + 1;
+}
+
+/**
+ * Create a column and put it at the chosen position (R49.3): the API appends it, and one reorder
+ * request moves it when it should not be last. Returns the new sequence.
+ */
+export async function createColumnAt(boardId: string, token: string | null, columns: BoardColumn[], name: string, position: string): Promise<BoardColumn[]> {
+  const created = await apiClient<Column>(`/api/boards/${boardId}/columns`, { method: "POST", token, body: { name } });
+  const column: BoardColumn = { ...created, cards: [] };
+  const at = insertIndex(columns, position);
+  const next = [...columns.slice(0, at), column, ...columns.slice(at)];
+  if (at === columns.length) return next;   // the API already put it last
+  const plan = renumber(next);
+  await apiClient<Column[]>(`/api/boards/${boardId}/columns/reorder`, { method: "PATCH", token, body: { columns: plan } });
+  return next.map((c, i) => ({ ...c, order: plan[i].order }));
+}
+
+/** Move the item at `from` so it lands at `to` (an index in the list without it). */
+export function moveItem<T>(list: T[], from: number, to: number): T[] {
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  next.splice(Math.max(0, Math.min(to, next.length)), 0, item);
+  return next;
+}
+
 /** Orders 1024, 2048, ... for the given sequence: distinct, positive, and one request. */
 export function renumber(columns: { id: string }[]): { id: string; order: number }[] {
   return columns.map((c, i) => ({ id: c.id, order: (i + 1) * ORDER_STEP }));
@@ -167,6 +207,48 @@ export function ColumnManager({ boardId, columns, onChange }: { boardId: string;
   const [newName, setNewName] = useState("");
   const [position, setPosition] = useState("end");
   const [busy, setBusy] = useState(false);
+  const [armed, setArmed] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [drop, setDrop] = useState<{ id: string; side: "before" | "after" } | null>(null);
+
+  function onDragStart(event: DragEvent<HTMLLIElement>, id: string) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", id);   // Firefox needs data to start a drag
+    setDragId(id);
+  }
+
+  function onDragOver(event: DragEvent<HTMLLIElement>, id: string) {
+    if (!dragId) return;
+    event.preventDefault();
+    const box = event.currentTarget.getBoundingClientRect();
+    const side = event.clientY < box.top + box.height / 2 ? "before" : "after";
+    if (drop?.id !== id || drop.side !== side) setDrop({ id, side });
+  }
+
+  function endDrag() {
+    setDragId(null);
+    setDrop(null);
+    setArmed(null);
+  }
+
+  async function onDrop(event: DragEvent<HTMLLIElement>) {
+    event.preventDefault();
+    const from = columns.findIndex((c) => c.id === dragId);
+    const target = drop ? columns.findIndex((c) => c.id === drop.id) : -1;
+    endDrag();
+    if (from === -1 || target === -1) return;
+    let to = target + (drop!.side === "after" ? 1 : 0);
+    if (from < to) to -= 1;
+    if (to === from) return;
+    setBusy(true);
+    try {
+      await applyOrder(moveItem(columns, from, to));
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function applyOrder(next: BoardColumn[]) {
     const plan = renumber(next);
@@ -221,15 +303,10 @@ export function ColumnManager({ boardId, columns, onChange }: { boardId: string;
     if (!newName.trim()) return;
     setBusy(true);
     try {
-      const created = await apiClient<Column>(`/api/boards/${boardId}/columns`, { method: "POST", token, body: { name: newName.trim() } });
-      const column: BoardColumn = { ...created, cards: [] };
-      const at = position === "end" ? columns.length : position === "start" ? 0 : columns.findIndex((c) => c.id === position) + 1;
-      const next = [...columns.slice(0, at), column, ...columns.slice(at)];
-      if (at === columns.length) onChange(next);   // the API already put it last
-      else await applyOrder(next);
+      onChange(await createColumnAt(boardId, token, columns, newName.trim(), position));
       setNewName("");
       setPosition("end");
-      notify.success(`Column "${column.name}" added`);
+      notify.success(`Column "${newName.trim()}" added`);
     } catch (err) {
       handleError(err);
     } finally {
@@ -252,13 +329,32 @@ export function ColumnManager({ boardId, columns, onChange }: { boardId: string;
   return (
     <section className="grid gap-3" aria-labelledby={`${ids}-columns`} aria-busy={busy || undefined}>
       <h3 id={`${ids}-columns`} className="settings-heading">Columns</h3>
-      <p className="text-sm text-muted">The last column counts as done for progress and analytics.</p>
+      <p className="text-sm text-muted">Drag a column by its grip, or use the arrows. The last column counts as done for progress and analytics.</p>
       {columns.length === 0 ? (
         <p className="text-sm text-muted">No columns yet. Add the first one below.</p>
       ) : (
         <ol className="grid gap-2" data-testid="column-manager">
           {columns.map((column, i) => (
-            <li key={column.id} className="column-row glass-pebble rounded-pebble p-2">
+            <li
+              key={column.id}
+              className="column-row glass-pebble rounded-pebble p-2"
+              draggable={armed === column.id}
+              data-dragging={dragId === column.id || undefined}
+              data-drop={drop?.id === column.id && dragId !== column.id ? drop.side : undefined}
+              onDragStart={(e) => onDragStart(e, column.id)}
+              onDragOver={(e) => onDragOver(e, column.id)}
+              onDrop={(e) => void onDrop(e)}
+              onDragEnd={endDrag}
+            >
+              <span
+                className="column-row-grip"
+                aria-hidden="true"
+                title="Drag to reorder"
+                onPointerDown={() => setArmed(column.id)}
+                onPointerUp={() => !dragId && setArmed(null)}
+              >
+                <svg viewBox="0 0 16 16" className="size-4" fill="currentColor"><circle cx="5.5" cy="4" r="1.3" /><circle cx="10.5" cy="4" r="1.3" /><circle cx="5.5" cy="8" r="1.3" /><circle cx="10.5" cy="8" r="1.3" /><circle cx="5.5" cy="12" r="1.3" /><circle cx="10.5" cy="12" r="1.3" /></svg>
+              </span>
               <span className="column-row-index" aria-hidden="true">{i + 1}</span>
               <label htmlFor={`${ids}-col-${column.id}`} className="visually-hidden">Name of column {i + 1}</label>
               <input

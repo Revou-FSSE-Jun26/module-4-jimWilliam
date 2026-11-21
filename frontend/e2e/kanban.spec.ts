@@ -28,11 +28,14 @@ test("kanban journey: board, columns, card, drag, reload, comment", async ({ pag
   const done = page.getByRole("region", { name: "Done", exact: true });
 
   await test.step("4. add two columns", async () => {
-    const addColumn = page.getByRole("form", { name: "Add a column" });
+    // The "+" tile at the end of the row opens a small dialog (R49.7).
     for (const name of ["To do", "Done"]) {
-      await addColumn.getByLabel("Column name").fill(name);
-      await addColumn.getByRole("button", { name: "Add column" }).click();
+      await page.getByRole("button", { name: "Add a column" }).click();
+      const dialog = page.getByRole("dialog", { name: "Add a column" });
+      await dialog.getByLabel("Column name").fill(name);
+      await dialog.getByRole("button", { name: "Add column" }).click();
       await expect(page.getByRole("region", { name, exact: true })).toBeVisible();
+      await expect(dialog).toBeHidden();
     }
     await expect(todo).toBeVisible();
     await expect(done).toBeVisible();

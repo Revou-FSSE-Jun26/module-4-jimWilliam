@@ -9,6 +9,7 @@ class CardCreateSchema(Schema):
     title = fields.String(required=True, validate=validate.Length(min=1, max=200))
     description = fields.String(allow_none=True, validate=validate.Length(max=20000))   # HTML; text limit in the service
     assignee_id = fields.UUID(allow_none=True)
+    due_date = fields.Date(allow_none=True)   # "YYYY-MM-DD" (R51)
 
     @pre_load
     def strip(self, data, **kwargs):
@@ -23,7 +24,7 @@ class CardUpdateSchema(CardCreateSchema):
     @validates_schema
     def not_empty(self, data, **kwargs):
         if not data:
-            raise ValidationError("Send at least one of title, description or assignee_id")
+            raise ValidationError("Send at least one of title, description, assignee_id or due_date")
 
 
 class CardPositionSchema(Schema):
@@ -60,6 +61,7 @@ class CardSchema(Schema):
     description_text = fields.String(allow_none=True)
     assignee_id = fields.UUID(allow_none=True)
     assignee = fields.Method("get_assignee")
+    due_date = fields.Date(allow_none=True)
     order = fields.Float()
     comment_count = fields.Method("get_comment_count")
     attachment_count = fields.Method("get_attachment_count")

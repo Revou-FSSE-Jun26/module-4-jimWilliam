@@ -28,6 +28,10 @@
   --radius-pebble: 1rem;
   --radius-pill: 999px;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Long, soft deceleration for entrances and layout changes (R37.3, R53). */
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-enter: 620ms;
+  --stagger: 75ms;
   --breakpoint-3xl: 120rem;
   --breakpoint-4xl: 160rem;
 }
@@ -362,15 +366,16 @@
    Entrances (R37.2, R37.3): @starting-style, reduced motion = short fade
    ========================================================================== */
 .enter {
-  transition: opacity var(--dur-base) var(--ease-out), translate var(--dur-base) var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 40ms);
+  transition: opacity var(--dur-enter) var(--ease-smooth), translate var(--dur-enter) var(--ease-smooth),
+    scale var(--dur-enter) var(--ease-smooth);
+  transition-delay: calc(var(--i, 0) * var(--stagger));
 }
 @starting-style {
-  .enter { opacity: 0; translate: 0 0.5rem; }
+  .enter { opacity: 0; translate: 0 0.875rem; scale: 0.985; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .enter { translate: none; transition-duration: 150ms; transition-delay: 0ms; }
-  @starting-style { .enter { translate: none; } }
+  .enter { translate: none; scale: none; transition-duration: 150ms; transition-delay: 0ms; }
+  @starting-style { .enter { translate: none; scale: none; } }
 }
 
 /* ==========================================================================
@@ -385,6 +390,7 @@ dialog.base-modal {
   padding: 0;
   inline-size: min(40rem, calc(100vw - 2rem));
   max-block-size: calc(100dvh - 2rem);
+  overflow: hidden;   /* the UA gives modal dialogs overflow: auto; .modal-body is the one scroller */
   color: var(--foam);
   border-radius: var(--radius-pane);
   overscroll-behavior: contain;
@@ -393,6 +399,16 @@ dialog.base-modal {
   transition: opacity 180ms var(--ease-out), scale 180ms var(--ease-out), display 180ms, overlay 180ms;
   transition-behavior: allow-discrete;
 }
+.modal-frame { display: flex; flex-direction: column; max-block-size: inherit; min-block-size: 0; }
+.modal-frame > header { flex: none; }
+.modal-body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block-end: max(1.25rem, env(safe-area-inset-bottom));
+}
+@media (width >= 48rem) { dialog.base-modal.wide { inline-size: min(52rem, calc(100vw - 3rem)); } }
 dialog.base-modal[open] {
   opacity: 1;
   scale: 1;
@@ -522,6 +538,10 @@ dialog.base-modal[open]::backdrop { opacity: 1; }
 @media (width >= 48rem) and (width < 80rem) {
   .sidebar { border-start-end-radius: 1.75rem 50%; border-end-end-radius: 1.75rem 50%; }
 }
+/* Collapsed sidebar on wide screens (R53): the same rail rules, chosen by the preference. */
+@media (width >= 80rem) {
+  :root[data-sidebar="collapsed"] .sidebar { border-start-end-radius: 1.75rem 50%; border-end-end-radius: 1.75rem 50%; }
+}
 /* The curve bulges outward mid-height, so the nav can run closer to the edge than the capsule. */
 @media (width >= 80rem) {
   .sidebar { inline-size: 18rem; padding-inline: 1rem 1.5rem; }
@@ -598,20 +618,20 @@ dialog.base-modal[open]::backdrop { opacity: 1; }
    fade the edges instead (scroll-driven animation); elsewhere a thin tinted scrollbar remains. */
 @property --fade-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
 @property --fade-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
-.nav-scroll, .card-list {
+.nav-scroll, .card-list, .modal-body {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--seaglass) 35%, transparent) transparent;
   padding-block: 0.125rem;
 }
 @supports (animation-timeline: scroll()) {
-  .nav-scroll, .card-list {
+  .nav-scroll, .card-list, .modal-body {
     scrollbar-width: none;
     -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
     mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
     animation: nav-fade linear both;
     animation-timeline: scroll(self block);
   }
-  .nav-scroll::-webkit-scrollbar, .card-list::-webkit-scrollbar { display: none; }
+  .nav-scroll::-webkit-scrollbar, .card-list::-webkit-scrollbar, .modal-body::-webkit-scrollbar { display: none; }
 }
 @keyframes nav-fade {
   0% { --fade-top: 0px; --fade-bottom: 2.5rem; }
@@ -726,6 +746,29 @@ dialog.base-modal[open]::backdrop { opacity: 1; }
      turns it into the rail flyout. */
   .sidebar .nav-arc > li > ul:not(:popover-open) { display: none; }
 }
+/* Collapsed sidebar on wide screens (R53): the same rail rules, chosen by the preference. */
+@media (width >= 80rem) {
+  :root[data-sidebar="collapsed"] .sidebar .nav-label-rail {
+    position: absolute;
+    inset-inline-start: calc(100% + 0.75rem);
+    padding: 0.25rem 0.625rem;
+    border-radius: var(--radius-pill);
+    background: var(--raised-solid);
+    color: var(--foam);
+    font-size: 0.875rem;
+    box-shadow: var(--elev-2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-quick) var(--ease-out);
+  }
+  :root[data-sidebar="collapsed"] .sidebar .nav-link:is(:hover, :root[data-sidebar="collapsed"] :focus-visible) .nav-label-rail { opacity: 1; }
+  :root[data-sidebar="collapsed"] .sidebar .rail-hide { display: none; }
+  :root[data-sidebar="collapsed"] .sidebar .nav-scroll { overflow: visible; -webkit-mask-image: none; mask-image: none; animation: none; }
+  :root[data-sidebar="collapsed"] .sidebar .sidebar-head { border-block-end: 0; padding-block-end: 0.25rem; }
+  :root[data-sidebar="collapsed"] /* CSS decides from the first paint, :root[data-sidebar="collapsed"] so the Boards list never flashes inline before hydration
+     turns it into the rail flyout. */
+  .sidebar .nav-arc > li > ul:not(:popover-open) { display: none; }
+}
 .nav-sub { padding-inline-start: 1.75rem; display: grid; gap: 0.125rem; }
 .nav-sub .nav-link { min-block-size: 2.25rem; font-size: 0.9375rem; }
 .nav-sub[hidden] { display: none; }
@@ -814,7 +857,6 @@ dialog.nav-drawer::backdrop { background: rgb(5 20 25 / 0.55); }
   min-block-size: 0;
   border-radius: var(--radius-pane);
 }
-.kanban-add { align-self: flex-start; }
 
 /* Arrows appear only where there is more to see. */
 .kanban-arrow {
@@ -1278,6 +1320,12 @@ html { scrollbar-color: color-mix(in srgb, var(--seaglass) 40%, transparent) tra
   .sidebar .tide-clock-compact { display: grid; justify-items: center; padding: 0 0 0.5rem; }
   .sidebar .tide-clock-compact .tide-clock-time { margin: 0; font-size: 1rem; line-height: 1.2; padding: 0.25rem 0.375rem; }
 }
+/* Collapsed sidebar on wide screens (R53): the same rail rules, chosen by the preference. */
+@media (width >= 80rem) {
+  :root[data-sidebar="collapsed"] .sidebar .tide-clock:not(.tide-clock-compact) { display: none; }
+  :root[data-sidebar="collapsed"] .sidebar .tide-clock-compact { display: grid; justify-items: center; padding: 0 0 0.5rem; }
+  :root[data-sidebar="collapsed"] .sidebar .tide-clock-compact .tide-clock-time { margin: 0; font-size: 1rem; line-height: 1.2; padding: 0.25rem 0.375rem; }
+}
 /* The waves follow the tide: about 3.5rem lower at low tide (03:00) than at high tide (15:00). */
 .sidebar-tide {
   translate: 0 calc((1 - var(--tide-level, 0.6)) * 3.5rem);
@@ -1405,3 +1453,156 @@ html { scrollbar-color: color-mix(in srgb, var(--seaglass) 40%, transparent) tra
 .column-row-btn:hover:not(:disabled) { background: var(--hover-tint); }
 .column-row-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 @media (pointer: coarse) { .column-row-btn { inline-size: 2.75rem; block-size: 2.75rem; } }
+
+
+/* ==========================================================================
+   Collapsible sidebar (R53): wide screens can switch to the icon rail
+   ========================================================================== */
+@media (width >= 80rem) {
+  :root[data-sidebar="collapsed"] .sidebar { inline-size: 5.5rem; padding-inline: 0.75rem 1.25rem; }
+  :root[data-sidebar="collapsed"] .sidebar-foot { padding-inline-end: 0; }
+  :root[data-sidebar="collapsed"] .app-main { --main-start: calc(5.5rem + 1rem); }
+  :root[data-sidebar="collapsed"] .nav-arc > li { inline-size: 100%; translate: none; }
+}
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  margin-inline-start: auto;
+  border-radius: 0.75rem;
+  color: var(--muted);
+  transition: background-color var(--dur-quick) var(--ease-out), color var(--dur-quick) var(--ease-out);
+}
+.sidebar-toggle:hover { background: var(--hover-tint); color: var(--foam); }
+.sidebar-toggle svg { transition: rotate var(--dur-base) var(--ease-out); }
+:root[data-sidebar="collapsed"] .sidebar-toggle svg { rotate: 180deg; }
+@media (width >= 80rem) {
+  .sidebar-toggle { display: inline-flex; }
+  :root[data-sidebar="collapsed"] .sidebar-head { display: grid; justify-items: center; gap: 0.5rem; }
+  :root[data-sidebar="collapsed"] .sidebar-toggle { margin-inline-start: 0; }
+}
+/* The width change glides; the page and the board row follow it. */
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar { transition: inline-size 380ms var(--ease-smooth), padding 380ms var(--ease-smooth); }
+  .app-main { transition: padding-inline-start 380ms var(--ease-smooth); }
+  .kanban-row { transition: margin 380ms var(--ease-smooth), padding 380ms var(--ease-smooth); }
+}
+
+/* ==========================================================================
+   Due dates (R51): tone in colour and in words
+   ========================================================================== */
+.due-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  inline-size: fit-content;
+  padding: 0.125rem 0.55rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--rim);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.due-chip[data-tone="overdue"] { color: var(--danger-text); border-color: color-mix(in srgb, var(--danger-text) 55%, transparent); background: color-mix(in srgb, var(--danger-fill) 14%, transparent); }
+.due-chip[data-tone="today"], .due-chip[data-tone="soon"] { color: var(--foam); border-color: color-mix(in srgb, var(--buoy) 65%, transparent); background: color-mix(in srgb, var(--buoy) 18%, transparent); }
+.due-chip[data-tone="done"] { color: var(--seaglass); border-color: color-mix(in srgb, var(--seaglass) 45%, transparent); }
+@media (forced-colors: active) { .due-chip { border-color: CanvasText; } }
+
+/* ==========================================================================
+   "+" tile at the end of the board (R49.7)
+   ========================================================================== */
+.kanban-add-tile {
+  flex: 0 0 3.5rem;
+  align-self: stretch;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.5rem;
+  border: 1.5px dashed color-mix(in srgb, var(--seaglass) 45%, transparent);
+  border-radius: var(--radius-pane);
+  color: var(--seaglass);
+  transition: background-color var(--dur-quick) var(--ease-out), border-color var(--dur-quick) var(--ease-out), flex-basis 380ms var(--ease-smooth);
+}
+.kanban-add-tile:hover { background: var(--hover-tint); border-color: var(--seaglass); }
+.kanban-add-tile[data-empty] { flex-basis: min(20rem, 85vw); }
+.kanban-add-plus { font-size: 1.75rem; line-height: 1; font-weight: 300; }
+@media (pointer: coarse) { .kanban-add-tile { flex-basis: 4rem; } }
+
+/* ==========================================================================
+   Column manager drag (R49.6)
+   ========================================================================== */
+.column-row { position: relative; transition: opacity var(--dur-quick) var(--ease-out), translate 200ms var(--ease-smooth); }
+.column-row[data-dragging] { opacity: 0.45; }
+.column-row[data-drop]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0.5rem;
+  block-size: 3px;
+  border-radius: 3px;
+  background: var(--seaglass);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seaglass) 25%, transparent);
+}
+.column-row[data-drop="before"]::before { inset-block-start: -0.4rem; }
+.column-row[data-drop="after"]::before { inset-block-end: -0.4rem; }
+.column-row-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 2.25rem;
+  border-radius: 0.5rem;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+}
+.column-row-grip:hover { background: var(--hover-tint); color: var(--foam); }
+.column-row-grip:active { cursor: grabbing; }
+
+/* ==========================================================================
+   Custom board colour (R48.4)
+   ========================================================================== */
+.color-swatch-dot[data-custom] {
+  background:
+    radial-gradient(circle at 50% 50%, oklch(0.74 0.11 var(--board-hue)) 42%, transparent 44%),
+    conic-gradient(from 0deg, oklch(0.74 0.11 0), oklch(0.74 0.11 60), oklch(0.74 0.11 120), oklch(0.74 0.11 180), oklch(0.74 0.11 240), oklch(0.74 0.11 300), oklch(0.74 0.11 360));
+}
+.hue-slider {
+  inline-size: 100%;
+  block-size: 1.5rem;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.hue-slider::-webkit-slider-runnable-track {
+  block-size: 0.625rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to right, oklch(0.74 0.11 0), oklch(0.74 0.11 60), oklch(0.74 0.11 120), oklch(0.74 0.11 180), oklch(0.74 0.11 240), oklch(0.74 0.11 300), oklch(0.74 0.11 359));
+}
+.hue-slider::-moz-range-track {
+  block-size: 0.625rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to right, oklch(0.74 0.11 0), oklch(0.74 0.11 60), oklch(0.74 0.11 120), oklch(0.74 0.11 180), oklch(0.74 0.11 240), oklch(0.74 0.11 300), oklch(0.74 0.11 359));
+}
+.hue-slider::-webkit-slider-thumb {
+  appearance: none;
+  inline-size: 1.375rem;
+  block-size: 1.375rem;
+  margin-block-start: -0.375rem;
+  border-radius: 50%;
+  background: oklch(0.74 0.11 var(--board-hue));
+  border: 3px solid var(--raised-solid);
+  box-shadow: var(--elev-1);
+}
+.hue-slider::-moz-range-thumb {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  border-radius: 50%;
+  background: oklch(0.74 0.11 var(--board-hue));
+  border: 3px solid var(--raised-solid);
+}
+.hue-slider:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; border-radius: var(--radius-pill); }

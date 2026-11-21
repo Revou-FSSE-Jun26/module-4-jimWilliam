@@ -7,7 +7,7 @@ export interface BaseModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
-  /** Below 768 px, show as a full-height sheet sliding up (CardDetailModal). */
+  /** Below 768 px, show as a sheet sliding up from the bottom. On by default for every dialog (R52.2). */
   sheet?: boolean;
   wide?: boolean;
 }
@@ -17,7 +17,7 @@ export interface BaseModalProps {
  * containment, Escape (R16.6) and focus return, so there is no role="dialog", aria-modal, focus
  * trap or Escape handler here. closedby="any" adds click-outside where supported.
  */
-export function BaseModal({ open, title, onClose, children, sheet = false, wide = false }: BaseModalProps) {
+export function BaseModal({ open, title, onClose, children, sheet = true, wide = false }: BaseModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -62,11 +62,11 @@ export function BaseModal({ open, title, onClose, children, sheet = false, wide 
       ref={ref}
       aria-labelledby={titleId}
       {...{ closedby: "any" }}
-      className={`base-modal glass-raised ${sheet ? "sheet" : ""} ${wide ? "md:w-[min(48rem,calc(100vw-2rem))]" : ""}`}
+      className={`base-modal glass-raised ${sheet ? "sheet" : ""} ${wide ? "wide" : ""}`}
     >
       {/* Content stays mounted so the closing animation still shows it; a closed dialog is display: none. */}
       {(
-        <div className="flex max-h-[inherit] flex-col">
+        <div className="modal-frame">
           <header className="flex items-center gap-3 px-5 pt-5 pb-3 md:px-6">
             <h2 id={titleId} className="text-xl leading-tight">{title}</h2>
             <button
@@ -78,7 +78,8 @@ export function BaseModal({ open, title, onClose, children, sheet = false, wide 
               <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
           </header>
-          <div className="overflow-y-auto px-5 pb-5 md:px-6 md:pb-6">{children}</div>
+          {/* The only scroller in the dialog (R52.1): quiet scrollbar, faded edges like the sidebar. */}
+          <div className="modal-body px-5 pb-5 md:px-6 md:pb-6">{children}</div>
         </div>
       )}
     </dialog>
