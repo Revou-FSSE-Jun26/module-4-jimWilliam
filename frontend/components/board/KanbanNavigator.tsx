@@ -21,22 +21,31 @@ function columnEl(row: HTMLElement, id: string): HTMLElement | null {
   return row.querySelector<HTMLElement>(`[data-testid="column-${CSS.escape(id)}"]`);
 }
 
+/** The row's scroll padding: the full-bleed row reaches under the sidebar, which is not "in view". */
+function insets(row: HTMLElement): { start: number; end: number } {
+  const style = getComputedStyle(row);
+  return { start: parseFloat(style.scrollPaddingInlineStart) || 0, end: parseFloat(style.scrollPaddingInlineEnd) || 0 };
+}
+
 /** Which columns are at least half visible inside the row, and whether the row can scroll each way. */
 export function measure(row: HTMLElement, ids: string[]): ScrollState {
   const max = row.scrollWidth - row.clientWidth;
   const box = row.getBoundingClientRect();
+  const pad = insets(row);
+  const left = box.left + pad.start;
+  const right = box.right - pad.end;
   const visible = ids.filter((id) => {
     const el = columnEl(row, id);
     if (!el) return false;
     const r = el.getBoundingClientRect();
-    const shown = Math.min(r.right, box.right) - Math.max(r.left, box.left);
+    const shown = Math.min(r.right, right) - Math.max(r.left, left);
     return r.width > 0 && shown / r.width >= 0.5;
   });
   return { overflow: max > 1, canLeft: row.scrollLeft > 1, canRight: row.scrollLeft < max - 1, visible };
 }
 
 /**
- * Horizontal navigation for the Kanban (R44): edge shades and arrow buttons that appear only when
+ * Horizontal navigation for the Kanban (R44): arrow buttons that appear only when
  * there is more to see, a dock of column chips that shows which columns are in view and jumps to one,
  * and a mouse wheel that scrolls sideways when it is not over a card list that can scroll itself.
  */
@@ -98,14 +107,12 @@ export function KanbanNavigator({ rowRef, columns }: { rowRef: RefObject<HTMLDiv
     const row = rowRef.current;
     const el = row && columnEl(row, id);
     if (!row || !el) return;
-    const offset = el.getBoundingClientRect().left - row.getBoundingClientRect().left;
-    row.scrollBy({ left: offset - 8, behavior: smooth() });
+    const offset = el.getBoundingClientRect().left - (row.getBoundingClientRect().left + insets(row).start);
+    row.scrollBy({ left: offset, behavior: smooth() });
   };
 
   return (
     <>
-      <div className="kanban-edge kanban-edge-start" data-shown={state.canLeft || undefined} aria-hidden="true" />
-      <div className="kanban-edge kanban-edge-end" data-shown={state.canRight || undefined} aria-hidden="true" />
       {state.canLeft && (
         <button type="button" className="kanban-arrow kanban-arrow-start glass-pebble" onClick={() => page(-1)} aria-label="Scroll columns left">
           <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 6l-6 6 6 6" /></svg>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ViewTransition, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 
 import { avatarHue } from "@/lib/avatar";
+import { boardProgress, progressLabel } from "@/lib/progress";
 import { positionFallback } from "@/lib/polyfills";
 import type { Board } from "@/lib/types";
 
@@ -48,6 +49,21 @@ const ICONS = {
   tasks: "M9 11l2 2 4-4M5 4h14v16H5z",
   chevron: "M9 6l6 6-6 6",
 };
+
+/**
+ * Progress as water in the row (R46): the level is the share of cards in the board's last column,
+ * with a wave on the surface. Full boards are filled to the top and show a check instead of a count.
+ */
+function Liquid({ ratio }: { ratio: number }) {
+  return (
+    <span className="board-liquid" data-full={ratio >= 1 || undefined} data-empty={ratio <= 0 || undefined} aria-hidden="true">
+      <span className="board-liquid-fill" />
+      <svg className="board-liquid-wave" viewBox="0 0 120 6" preserveAspectRatio="none">
+        <path d="M0 3 Q 7.5 0 15 3 T 30 3 T 45 3 T 60 3 T 75 3 T 90 3 T 105 3 T 120 3 V6 H0 Z" />
+      </svg>
+    </span>
+  );
+}
 
 /** The current-page pill; one per shell, so it glides between items on navigation (R37.9). */
 function CurrentPill({ shell }: { shell: string }) {
@@ -170,36 +186,37 @@ export function NavTree({ boards, shell, onNavigate }: { boards: Board[]; shell:
           >
             {boards.length === 0 && <li className="px-3 py-2 text-sm text-muted">No boards yet</li>}
             {boards.map((board) => {
-              const key = `board-${board.id}`;
-              const listId = `${shell}-board-${board.id}`;
               const base = `/boards/${board.id}`;
-              const expanded = open[key] ?? pathname === base; // the current board starts expanded
+              const current = pathname === base;
+              const progress = boardProgress(board);
+              const descId = `${shell}-board-progress-${board.id}`;
               return (
                 <li key={board.id}>
-                  <button
-                    type="button"
+                  <Link
+                    href={base}
                     className="nav-link nav-board"
-                    aria-expanded={expanded}
-                    aria-controls={listId}
-                    onClick={() => toggle(key, expanded)}
-                    style={{ ["--board-hue" as string]: avatarHue(board.id) }}
+                    aria-current={current ? "page" : undefined}
+                    aria-describedby={progress ? descId : undefined}
+                    onClick={navigate}
+                    style={{ ["--board-hue" as string]: avatarHue(board.id), ["--progress" as string]: progress ? progress.ratio.toFixed(3) : 0 }}
                   >
+                    {current && <CurrentPill shell={shell} />}
+                    {progress && <Liquid ratio={progress.ratio} />}
                     <span className="board-dot" aria-hidden="true" />
                     <span className="nav-label">{board.name}</span>
-                    {(board.card_count ?? 0) > 0 && (
-                      <span className="nav-count ms-auto" aria-hidden="true" title={`${board.card_count} ${board.card_count === 1 ? "card" : "cards"}`}>{board.card_count}</span>
+                    {progress ? (
+                      <span className="nav-count ms-auto" aria-hidden="true">
+                        {progress.ratio === 1 ? (
+                          <svg viewBox="0 0 16 16" className="inline size-3.5 align-[-2px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 8.5l3 3 6-7" /></svg>
+                        ) : (
+                          `${progress.done}/${progress.total}`
+                        )}
+                      </span>
+                    ) : (
+                      (board.card_count ?? 0) > 0 && <span className="nav-count ms-auto" aria-hidden="true">{board.card_count}</span>
                     )}
-                    <svg aria-hidden="true" viewBox="0 0 24 24" className={`shrink-0 ${(board.card_count ?? 0) > 0 ? "" : "ms-auto "}size-4 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth="2"><path d={ICONS.chevron} /></svg>
-                  </button>
-                  <ul id={listId} hidden={!expanded} className="nav-sub nav-branch">
-                    <li><NavLink href={base} label="Board" current={pathname === base} shell={shell} onNavigate={navigate} sub /></li>
-                    {board.role === "admin" && (
-                      <>
-                        <li><NavLink href={`${base}#members`} label="Members" current={false} shell={shell} onNavigate={navigate} sub /></li>
-                        <li><NavLink href={`${base}#analytics`} label="Analytics" current={false} shell={shell} onNavigate={navigate} sub /></li>
-                      </>
-                    )}
-                  </ul>
+                  </Link>
+                  {progress && <span id={descId} hidden>{progressLabel(progress)}</span>}
                 </li>
               );
             })}

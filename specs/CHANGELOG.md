@@ -192,6 +192,13 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Why:** the project owner asked for the main page to scroll like the sidebar (down and sideways), to be full width and full height, and for a clock placed where it reads best. The clock goes above the profile rather than bottom right, because the bottom right of the board is where the last column and the dock live, and because tying it to the existing tide decoration makes it part of the design instead of a widget on top. The row is not masked for its fades: a mask would make it a backdrop root and break the columns' glass blur.
 - **Refinement prompt:** "Make the main page scroll down and left/right like the sidebar, full width and full height, and more interesting. Add a clock, in the bottom right or above the profile at the bottom left, with a brilliant idea."
 
+### 24. Full-bleed board row, board progress and a simpler Nav_Tree (project owner's request)
+
+- **Before (R35.5, R44, design "Board_Stage"):** after scrolling the Kanban sideways, the row's left edge and its edge shade showed as a box next to the Sidebar. Each board in the Nav_Tree opened a sub-list with Board, Members and Analytics links that repeated the board's own Top_Bar buttons. Boards showed only a card count.
+- **After:** the row is full-bleed, so Columns slide under the frosted Sidebar and blur out; the edge shades are gone. Board rows are direct links with a progress liquid (Cards in the last Column out of all Cards, the Analytics rule), `done/total` or a check at 100%, and live updates from the open board. New R44.6 and R46, Properties 48 and 49, task group 26; GET /api/boards gains `done_count`. The Tide_Clock's assigned count now refreshes after each navigation.
+- **Why:** the project owner saw the box at the left edge and asked to hide it with blur, proposed a liquid progress bar per board, and asked whether the sidebar's Members and Analytics links doubled the Top_Bar. They did: the same panels, reached two ways, at the cost of an extra level in every board row. "Done" is the last Column rather than a Column named "Done", because names are free text and Analytics already uses the last Column. The owner also asked whether to move the "cards assigned to you" chip; it stays under the clock (reasons in the reply), with fresher data.
+- **Refinement prompt:** "When I scroll right there is a box-like line on the left; hide it with the blur so it looks full width. Give each board in the sidebar a liquid progress bar, 100% when every task is done. Do the Members and Analytics links in the sidebar double the top bar? Should the assigned-cards chip move?"
+
 ---
 
 ## v5 — Template for the next round

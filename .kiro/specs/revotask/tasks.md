@@ -731,6 +731,24 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - `__tests__/stage-and-clock.test.tsx`, `e2e/stage.spec.ts`
     - _Requirements: 44.1, 44.3, 44.4, 45.2_
 
+- [x] 26. Full-bleed board row, board progress liquid, simpler Nav_Tree (refinement round v4)
+  - [x] 26.1 Make the Kanban row full-bleed so columns slide under the Sidebar's blur; remove the edge shades
+    - _Requirements: 44.6_
+
+  - [x] 26.2 Add `done_count` to B4 (last Column rule) with a test
+    - **Property 48: Board progress counts the last column**
+    - **Validates: Requirements 46.1**
+
+  - [x] 26.3 Turn board rows into links with the progress liquid; drop the duplicate Board, Members and Analytics sub-links; report live stats from the open board
+    - _Requirements: 35.5, 46.2, 46.3, 46.4, 46.5_
+
+  - [x] 26.4 Write the property test for the liquid and update the Nav_Tree tests
+    - **Property 49: Board progress liquid matches the counts**
+    - **Validates: Requirements 46.2, 46.3**
+
+  - [x] 26.5 Refresh the Tide_Clock's assigned count after each navigation
+    - _Requirements: 45.4_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
@@ -773,7 +791,9 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 22, "tasks": ["24.2"]},
     {"id": 23, "tasks": ["24.3", "25.1", "25.4"]},
     {"id": 24, "tasks": ["25.2", "25.3", "25.5"]},
-    {"id": 25, "tasks": ["25.6"]}
+    {"id": 25, "tasks": ["25.6", "26.1", "26.2", "26.5"]},
+    {"id": 26, "tasks": ["26.3"]},
+    {"id": 27, "tasks": ["26.4"]}
   ]
 }
 ```

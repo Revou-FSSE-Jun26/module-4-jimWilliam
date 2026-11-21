@@ -9,7 +9,7 @@ import { KanbanNavigator } from "@/components/board/KanbanNavigator";
 import { MembersPanel } from "@/components/board/MembersPanel";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { Field } from "@/components/forms/Field";
-import { PageHeader } from "@/components/layout/AppShell";
+import { PageHeader, useShell } from "@/components/layout/AppShell";
 import { BaseButton } from "@/components/shared/BaseButton";
 import { BaseModal } from "@/components/shared/BaseModal";
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +17,7 @@ import { useDragAndDrop, type BoardColumn } from "@/hooks/useDragAndDrop";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { apiClient } from "@/lib/apiClient";
 import { sortBoard } from "@/lib/board";
+import { columnStats } from "@/lib/progress";
 import { notify } from "@/lib/toast";
 import type { BoardDetail, Card, Column } from "@/lib/types";
 
@@ -29,6 +30,9 @@ export function KanbanBoard({ initialBoard }: { initialBoard: BoardDetail }) {
   const [columns, setColumns] = useState<BoardColumn[]>(() => sortBoard(initialBoard.columns));
   const rowRef = useRef<HTMLDivElement>(null);
   const navColumns = useMemo(() => columns.map((c) => ({ id: c.id, name: c.name, count: c.cards.length })), [columns]);
+  const { reportBoardStats } = useShell();
+  // Keep the sidebar's progress liquid in step with moves, adds and deletes on this board (R46.4).
+  useEffect(() => reportBoardStats(initialBoard.id, columnStats(columns)), [columns, initialBoard.id, reportBoardStats]);
   const [firstLoad, setFirstLoad] = useState(true);
   const [openCard, setOpenCard] = useState<Card | null>(null);
   const [focusCardId, setFocusCardId] = useState<string | null>(null);

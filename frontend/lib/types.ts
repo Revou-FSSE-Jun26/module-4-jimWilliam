@@ -60,6 +60,8 @@ export interface Board {
   role: Role;
   member_count?: number;
   card_count?: number;
+  /** Live Cards in the last Column; null when the Board has fewer than two Columns (R46). */
+  done_count?: number | null;
   created_at: string;
   updated_at: string;
 }

@@ -498,7 +498,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 2. WHILE the viewport is from 768 px to 1279 px wide, THE Sidebar SHALL show as a full-height icon rail with a shallower curved edge, and each icon link SHALL show its text label on hover and on keyboard focus.
 3. WHILE the viewport is narrower than 768 px, THE Frontend SHALL hide the Sidebar and show a menu button in the Top_Bar that opens the Nav_Drawer.
 4. THE Nav_Drawer SHALL slide in from the inline-start edge and SHALL close on a swipe toward that edge, a tap on the backdrop, its Close button, or the Escape key.
-5. THE Nav_Tree SHALL contain Dashboard, My Tasks and a Boards group, in that order; the Boards group SHALL show the number of Boards and contain one nested group per Board the User belongs to, each marked with a colour dot derived from the Board id and its open card count when it has any, and each Board group SHALL contain links to the Board, its Members panel and its Analytics panel, with Members and Analytics shown only to Board_Admins.
+5. THE Nav_Tree SHALL contain Dashboard, My Tasks and a Boards group, in that order; the Boards group SHALL show the number of Boards and contain one link per Board the User belongs to, marked with a colour dot derived from the Board id and its progress (R46) or card count. Members, Analytics and Settings are reached from the board's Top_Bar only, so the Nav_Tree does not repeat them.
 6. WHEN a User activates a group trigger in the expanded Sidebar or the Nav_Drawer, THE Nav_Tree SHALL expand or collapse that group in place.
 7. WHEN a User activates a group trigger in the icon rail, THE Nav_Tree SHALL open that group as a flyout beside the trigger, anchored to it and flipped to stay inside the viewport.
 8. THE Nav_Tree SHALL use `<a href>` links for destinations and `<button>` group triggers with `aria-expanded` and `aria-controls`, and SHALL NOT use `role="menu"`, so that users move through it with Tab.
@@ -632,6 +632,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 3. WHEN a vertical mouse wheel turns over the Kanban row and the card list under the pointer cannot scroll that way, THE Kanban row SHALL scroll sideways instead; at either end the page SHALL keep the wheel.
 4. WHILE the Kanban row overflows, THE Board_Stage SHALL show a dock with one chip per Column (name and card count), marking the Columns at least half in view with `aria-current`, and activating a chip SHALL scroll that Column to the start of the row.
 5. WHERE the browser supports scroll-driven animations, THE document, the Nav_Tree and each card list SHALL scroll without a visible scrollbar, with faded edges that show more content; THE Top_Bar SHALL lift with a deeper shadow once the page scrolls, and a shade at the bottom of the viewport SHALL mark more content until the end is reached. Elsewhere a thin tinted scrollbar SHALL show.
+6. THE Kanban row SHALL run from the viewport's inline-start edge to its inline-end edge, with its first Column aligned to the page content, so that Columns scrolled past the start slide under the frosted Sidebar instead of being cut off at a visible edge.
 
 ### Requirement 45: Tide_Clock
 
@@ -644,3 +645,15 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 3. THE tide level SHALL follow a smooth daily curve between 0 at 03:00 and 1 at 15:00, and THE Sidebar's waves SHALL rise and fall with it.
 4. THE expanded Tide_Clock SHALL link to /my-tasks with the number of cards assigned to the User.
 5. THE Tide_Clock SHALL update on each minute boundary and when the tab becomes visible again, SHALL render no time during server rendering (so hydration never mismatches), and SHALL NOT announce each minute to screen readers.
+
+### Requirement 46: Board progress in the Nav_Tree
+
+**User Story:** As a User, I want to see how far each board has come without opening it, so that I know where work is stuck.
+
+#### Acceptance Criteria
+
+1. THE Backend SHALL include `done_count` in each Board of GET /api/boards: the number of live Cards in the Board's last Column (highest order), the same rule as "completed" in Analytics, or null when the Board has fewer than two Columns.
+2. WHEN a Board has a `done_count` and at least one Card, THE Nav_Tree SHALL fill its row with a liquid whose level is `done_count / card_count`, with a wave on the surface, and SHALL show `done/total`; at 100% the row SHALL be full and show a check instead.
+3. THE progress SHALL be exposed to assistive technology through `aria-describedby` (for example "33% done: 4 of 12 cards in the last column") while the link's accessible name stays the Board name.
+4. WHEN Cards are moved, added or deleted on the open Board, THE Nav_Tree's progress for that Board SHALL update without a reload.
+5. THE liquid SHALL rise and fall with a 700 ms transition, its wave SHALL drift only when reduced motion is not requested, and it SHALL be hidden in forced-colors mode.

@@ -513,10 +513,17 @@ With a photo (R41.4), the Avatar renders the AVIF through ProtectedImage inside 
 ### Board_Stage (R44)
 
 - `.app-main:has(.board-stage)` becomes a flex column exactly `100dvh` tall; `.board-stage` takes the remaining height (`flex: 1 1 0`, at least 22rem) and holds the Kanban row and the dock. Other pages keep normal document scrolling.
-- `.kanban-row` is `overflow-x: auto; scrollbar-width: none` with `scroll-padding-inline` equal to its padding, so snapping to the first column leaves `scrollLeft` at 0. Columns use `align-items: stretch`; the card list is the flexible part and scrolls with the same faded edges as the Nav_Tree (`align-content: start` keeps cards packed at the top). The "Add a column" form keeps its natural height.
-- **No mask on the row.** A mask would make the row a backdrop root, so the columns' `backdrop-filter` could no longer see the page behind it. Edge shades are separate absolutely positioned gradients (themselves masked top and bottom) toggled by `data-shown`.
+- `.kanban-row` is `overflow-x: auto; scrollbar-width: none`. It is full-bleed (R44.6): negative inline margins equal to `.app-main`'s padding (`--main-start`, set per breakpoint) take it to both viewport edges, and matching `padding-inline` and `scroll-padding-inline` put the first Column where the content starts. Columns scrolled past the start slide under the fixed Sidebar, whose `backdrop-filter` blurs them, so there is no hard cut line; on phones they run to the screen edge. KanbanNavigator measures "in view" inside the scroll padding, so a Column under the Sidebar does not count. Columns use `align-items: stretch`; the card list is the flexible part and scrolls with the same faded edges as the Nav_Tree (`align-content: start` keeps cards packed at the top). The "Add a column" form keeps its natural height.
+- **No mask on the row.** A mask would make the row a backdrop root, so the columns' `backdrop-filter` could no longer see the page behind it. The first version used separate edge-shade gradients; they read as boxes, so they were removed in favour of the full-bleed row (CHANGELOG entry 24).
 - **KanbanNavigator** (`components/board/KanbanNavigator.tsx`) measures the row on scroll (one `requestAnimationFrame` per frame) and on resize (`ResizeObserver`): overflow, `canLeft`, `canRight` and the columns at least half in view. It renders the edge shades, arrow buttons (hidden for coarse pointers) and the dock (`<nav aria-label="Jump to a column">`, chips with `aria-current`). A non-passive `wheel` listener turns vertical wheel movement into sideways scrolling unless the card list under the pointer can scroll that way or the row is already at that end. Smooth scrolling is skipped under reduced motion.
 - **Page scrolling (R44.5).** Where `animation-timeline: scroll()` is supported the root scrollbar is hidden; the Top_Bar gets a `scroll(root)` animation over the first 5rem that deepens its shadow, and a fixed `.page-fade` gradient at the bottom fades out over the last 10% of the scroll. When the page cannot scroll the timeline is inactive and neither shows. The visual suite's settle helper ignores scroll-driven animations, which never finish.
+
+### Board progress (R46)
+
+- **API.** `list_boards` adds three correlated scalar subqueries: column count, the last Column's id (`ORDER BY order DESC LIMIT 1`) and the count of live Cards in it. `done_count` is that count when the Board has two or more Columns, otherwise null.
+- **Liquid.** Each board row is a link (`.nav-link.nav-board`) carrying `--board-hue` and `--progress`. Inside it, `.board-liquid` (absolute, `z-index: -1`, clipped to the row's radius) holds a fill whose height is `--progress × 100%` (a vertical gradient of `oklch(0.74 0.11 <hue>)` at 30% to 14% alpha) and a 0.375rem SVG wave on its surface, 200% wide and drifting by −50% over 6 s. Level changes ease over 700 ms. Full rows hide the wave and show a check; empty ones hide it.
+- **Live updates.** AppShell keeps the server Board list plus a map of live stats; KanbanBoard reports `columnStats(columns)` (all Cards, and the last Column's Cards when there are two or more Columns) through `useShell().reportBoardStats` whenever its columns change, so dragging a Card into the last Column raises the liquid at once.
+- **Why the last Column.** Analytics already defines "completed" as a Card in the last Column, and Column names are free text, so matching "Done" by name would miss "Shipped", "Fertig" or "Selesai". Users order their board so the last Column is the finished state.
 
 ### Tide_Clock (R45)
 
@@ -797,6 +804,10 @@ Route and page identifiers refer to the tables above. "—" marks a criterion th
 | 44.5 | P1–P6 (document, Nav_Tree and card list scrolling) |
 | 45.1–45.3, 45.5 | P3–P6 (Sidebar, Nav_Drawer: TideClock) |
 | 45.4 | P3–P6 (TideClock; calls B13) |
+| 44.6 | P4 (Board_Stage full-bleed row) |
+| 46.1 | B4 |
+| 46.2, 46.3, 46.5 | P3–P6 (Nav_Tree board rows) |
+| 46.4 | P4 (KanbanBoard reports stats through AppShell) |
 
 ## Error Handling
 
@@ -1104,6 +1115,18 @@ For any time of day, `tideLevel` is in [0, 1], equals 1 at 15:00 and 0 at 03:00,
 For any time of day, the 24-hour parts are the zero-padded hour and minute with no suffix, and the 12-hour parts have an hour from 1 to 12 and an AM/PM suffix that convert back to the same hour, with the same minutes.
 
 **Validates: Requirements 45.2**
+
+### Property 48: Board progress counts the last column
+
+For any Board, `done_count` in GET /api/boards equals the number of live Cards in the Column with the highest order when the Board has at least two Columns, and is null otherwise; soft-deleted Cards are never counted.
+
+**Validates: Requirements 46.1**
+
+### Property 49: Board progress liquid matches the counts
+
+For any `card_count` and `done_count` (or null), the Nav_Tree row shows a liquid exactly when `done_count` is not null and `card_count` is positive; its `--progress` equals `done_count / card_count`, and its description names both counts.
+
+**Validates: Requirements 46.2, 46.3**
 
 ### Property 45: Editor links use only http, https or mailto
 

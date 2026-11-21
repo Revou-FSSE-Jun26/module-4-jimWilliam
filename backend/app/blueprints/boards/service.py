@@ -15,7 +15,7 @@ def create_board(user_id, payload) -> Board:
     db.session.flush()
     db.session.add(BoardMember(board_id=board.id, user_id=user_id, role="admin"))
     db.session.commit()
-    board.role, board.member_count, board.card_count = "admin", 1, 0
+    board.role, board.member_count, board.card_count, board.done_count = "admin", 1, 0, None
     return board
 
 
@@ -25,15 +25,24 @@ def list_boards(user_id) -> list[Board]:
     card_count = (select(func.count(Card.id)).join(Column, Card.column_id == Column.id)
                   .where(Column.board_id == Board.id, Card.deleted_at.is_(None))
                   .correlate(Board).scalar_subquery())
+    # Progress (R46): "done" is the last Column (highest order), the same rule Analytics uses.
+    # With fewer than two Columns there is no "done" stage, so done_count is null.
+    column_count = (select(func.count(Column.id)).where(Column.board_id == Board.id)
+                    .correlate(Board).scalar_subquery())
+    last_column = (select(Column.id).where(Column.board_id == Board.id)
+                   .order_by(Column.order.desc()).limit(1).correlate(Board).scalar_subquery())
+    done_count = (select(func.count(Card.id)).where(Card.column_id == last_column, Card.deleted_at.is_(None))
+                  .correlate(Board).scalar_subquery())
     rows = db.session.execute(
-        select(Board, BoardMember.role, member_count, card_count)
+        select(Board, BoardMember.role, member_count, card_count, column_count, done_count)
         .join(BoardMember, BoardMember.board_id == Board.id)
         .where(BoardMember.user_id == user_id)
         .order_by(Board.updated_at.desc())
     ).all()
     boards = []
-    for board, role, members, cards in rows:
+    for board, role, members, cards, columns, done in rows:
         board.role, board.member_count, board.card_count = role, members, cards
+        board.done_count = done if columns >= 2 else None
         boards.append(board)
     return boards
 

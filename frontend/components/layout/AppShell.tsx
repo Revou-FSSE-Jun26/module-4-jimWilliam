@@ -8,9 +8,16 @@ import { TopBar } from "@/components/layout/TopBar";
 import { installPolyfills } from "@/lib/polyfills";
 import type { Board } from "@/lib/types";
 
+export interface BoardStats {
+  card_count: number;
+  done_count: number | null;
+}
+
 interface ShellContextValue {
   boards: Board[];
   openDrawer: () => void;
+  /** The open board reports its live counts, so the sidebar's progress moves as cards move (R46.4). */
+  reportBoardStats: (boardId: string, stats: BoardStats) => void;
 }
 
 const ShellContext = createContext<ShellContextValue | null>(null);
@@ -22,14 +29,26 @@ export function useShell(): ShellContextValue {
 }
 
 /** Sidebar (768 px and up) or Nav_Drawer (below), plus the main content area. */
-export function AppShell({ boards, children }: { boards: Board[]; children: ReactNode }) {
+export function AppShell({ boards: serverBoards, children }: { boards: Board[]; children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [live, setLive] = useState<Record<string, BoardStats>>({});
+  const reportBoardStats = useCallback((boardId: string, stats: BoardStats) => {
+    setLive((current) => {
+      const old = current[boardId];
+      if (old && old.card_count === stats.card_count && old.done_count === stats.done_count) return current;
+      return { ...current, [boardId]: stats };
+    });
+  }, []);
+  const boards = useMemo(
+    () => serverBoards.map((b) => (live[b.id] ? { ...b, ...live[b.id] } : b)),
+    [serverBoards, live],
+  );
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   useEffect(() => installPolyfills(), []);
 
-  const value = useMemo(() => ({ boards, openDrawer }), [boards, openDrawer]);
+  const value = useMemo(() => ({ boards, openDrawer, reportBoardStats }), [boards, openDrawer, reportBoardStats]);
   return (
     <ShellContext value={value}>
       <Sidebar boards={boards} />

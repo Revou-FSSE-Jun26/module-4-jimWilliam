@@ -1,5 +1,6 @@
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import fc from "fast-check";
 
 import { NavTree } from "@/components/layout/NavTree";
 import { ProfileMenu } from "@/components/layout/ProfileMenu";
@@ -32,26 +33,45 @@ describe("NavTree (R35.5, R35.6, R35.8, R35.9)", () => {
     expect(screen.getByRole("link", { name: "My tasks" })).not.toHaveAttribute("aria-current");
   });
 
-  it("expands and collapses a board group in place and remembers it", async () => {
+  it("links each board straight to its page, with no duplicate Members or Analytics links", () => {
     renderWithProviders(<NavTree boards={BOARDS} shell="sb" />);
-    const trigger = screen.getByRole("button", { name: "Sprint 14" });
-    const list = document.getElementById(trigger.getAttribute("aria-controls")!)!;
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
-    expect(list).not.toBeVisible();
-    await userEvent.click(trigger);
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-    expect(list).toBeVisible();
-    expect(JSON.parse(sessionStorage.getItem("revotask_nav")!)).toMatchObject({ "board-b-admin": true });
+    expect(screen.getByRole("link", { name: "Sprint 14" })).toHaveAttribute("href", "/boards/b-admin");
+    expect(screen.getByRole("link", { name: "Launch" })).toHaveAttribute("href", "/boards/b-member");
+    expect(screen.queryByRole("link", { name: "Members" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Analytics" })).not.toBeInTheDocument();
   });
 
-  it("shows Members and Analytics only for boards you administer", async () => {
+  it("collapses the Boards group in place and remembers it", async () => {
     renderWithProviders(<NavTree boards={BOARDS} shell="sb" />);
-    await userEvent.click(screen.getByRole("button", { name: "Sprint 14" }));
-    await userEvent.click(screen.getByRole("button", { name: "Launch" }));
-    expect(screen.getByRole("link", { name: "Members" })).toHaveAttribute("href", "/boards/b-admin#members");
-    expect(screen.getAllByRole("link", { name: "Members" })).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Analytics" })).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Board" })).toHaveLength(2);
+    const trigger = screen.getByRole("button", { name: "Boards" });
+    const list = document.getElementById(trigger.getAttribute("aria-controls")!)!;
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(list).not.toBeVisible();
+    expect(JSON.parse(sessionStorage.getItem("revotask_nav")!)).toMatchObject({ boards: false });
+  });
+
+  // Feature: revotask, Property 49: Board progress liquid matches the counts
+  it("Property 49: the liquid level and label follow done / total, and boards without a done stage show none", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 40 }), fc.integer({ min: 0, max: 40 }), fc.boolean(), (a, b, hasDone) => {
+        const total = Math.max(a, b);
+        const done = Math.min(a, b);
+        const board: Board = { ...BOARDS[0], card_count: total, done_count: hasDone ? done : null };
+        const { unmount } = renderWithProviders(<NavTree boards={[board]} shell="sb" />);
+        const link = screen.getByRole("link", { name: "Sprint 14" });
+        const liquid = link.querySelector(".board-liquid");
+        const ok = hasDone && total > 0
+          ? liquid !== null &&
+            Math.abs(Number(link.style.getPropertyValue("--progress")) - done / total) < 0.001 &&
+            (document.getElementById(link.getAttribute("aria-describedby")!)?.textContent ?? "").includes(`${done} of ${total}`)
+          : liquid === null && !link.hasAttribute("aria-describedby");
+        unmount();
+        return ok;
+      }),
+      { numRuns: 60 },
+    );
   });
 });
 

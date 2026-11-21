@@ -81,3 +81,22 @@ def test_untouched_env_example_values_fail_fast():
 
     with pytest.raises(RuntimeError, match="example values"):
         create_app(PlaceholderConfig)
+
+
+# Feature: revotask, Property 48: Board progress counts the last column
+def test_board_list_reports_done_count_from_the_last_column(client, api):
+    _, headers, _ = api.user()
+    board = api.board(headers, "Progress")
+    listed = lambda: next(b for b in client.get("/api/boards", headers=headers).get_json()["data"] if b["id"] == board["id"])
+    assert listed()["done_count"] is None                     # no columns yet
+    todo = api.column(headers, board["id"], "To do")
+    api.card(headers, todo["id"], "a")
+    assert listed()["done_count"] is None                     # one column: no "done" stage
+    done = api.column(headers, board["id"], "Done")
+    api.card(headers, done["id"], "b")
+    moved = api.card(headers, todo["id"], "c")
+    client.patch(f"/api/cards/{moved['id']}/position", json={"column_id": done["id"], "order": 5000}, headers=headers)
+    deleted = api.card(headers, done["id"], "gone")
+    client.delete(f"/api/cards/{deleted['id']}", headers=headers)
+    data = listed()
+    assert (data["card_count"], data["done_count"]) == (3, 2)

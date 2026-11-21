@@ -38,6 +38,7 @@ class BoardSchema(Schema):
     role = fields.String()            # the requesting user's role, attached by the service
     member_count = fields.Integer()
     card_count = fields.Integer()
+    done_count = fields.Integer(allow_none=True)   # live Cards in the last Column; null with < 2 Columns
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -38,9 +39,10 @@ function setHour12(value: boolean) {
   window.dispatchEvent(new Event(FORMAT_EVENT));
 }
 
-/** The number of cards assigned to the signed-in user, fetched once per mount (R45.4). */
+/** The number of cards assigned to the signed-in user, refreshed after each navigation (R45.4). */
 function useAssignedCount(enabled: boolean): number | null {
   const { token } = useAuth();
+  const pathname = usePathname();
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     if (!enabled || !token) return;
@@ -51,7 +53,7 @@ function useAssignedCount(enabled: boolean): number | null {
     return () => {
       cancelled = true;
     };
-  }, [enabled, token]);
+  }, [enabled, token, pathname]);
   return count;
 }
 

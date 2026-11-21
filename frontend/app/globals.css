@@ -528,13 +528,15 @@ dialog.base-modal[open]::backdrop { opacity: 1; }
   .sidebar-foot { padding-inline-end: 0.75rem; }
 }
 .app-main {
+  --main-start: 0.75rem;
   min-block-size: 100dvh;
   padding: 0.75rem;
+  padding-inline-start: var(--main-start);
 }
 /* Board_Stage (R44): the board page never scrolls as a page; its columns fill the height instead. */
 .app-main:has(.board-stage) { display: flex; flex-direction: column; block-size: 100dvh; }
-@media (width >= 48rem) { .app-main { padding-inline-start: calc(5.5rem + 1rem); } }
-@media (width >= 80rem) { .app-main { padding-inline-start: calc(18rem + 1.25rem); } }
+@media (width >= 48rem) { .app-main { --main-start: calc(5.5rem + 1rem); } }
+@media (width >= 80rem) { .app-main { --main-start: calc(18rem + 1.25rem); } }
 
 /* A lit rim that follows the curve: sea glass fading into buoy amber and back. */
 .sidebar-rim {
@@ -784,6 +786,9 @@ dialog.nav-drawer::backdrop { background: rgb(5 20 25 / 0.55); }
   flex-direction: column;
   gap: 0.625rem;
 }
+/* Full-bleed row (R44.6): it runs from the viewport's start edge to its end edge, so columns scrolled
+   to the left slide under the frosted sidebar and blur out instead of being cut off at a hard line.
+   Padding and scroll-padding put the first column back where the content starts. */
 .kanban-row {
   flex: 1 1 0;
   min-block-size: 0;
@@ -794,10 +799,11 @@ dialog.nav-drawer::backdrop { background: rgb(5 20 25 / 0.55); }
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
-  scroll-padding-inline: 0.25rem;   /* snapping to the first column leaves scrollLeft at 0 */
-  scrollbar-width: none;   /* arrows, the dock, the wheel and swipes scroll it instead */
+  margin-inline: calc(-1 * var(--main-start, 0.75rem)) -0.75rem;
   padding-block: 0.25rem 0.5rem;
-  padding-inline: 0.25rem;
+  padding-inline: calc(var(--main-start, 0.75rem) + 0.25rem) 1rem;
+  scroll-padding-inline: calc(var(--main-start, 0.75rem) + 0.25rem) 1rem;
+  scrollbar-width: none;   /* arrows, the dock, the wheel and swipes scroll it instead */
 }
 .kanban-row::-webkit-scrollbar { display: none; }
 .kanban-column {
@@ -810,23 +816,7 @@ dialog.nav-drawer::backdrop { background: rgb(5 20 25 / 0.55); }
 }
 .kanban-add { align-self: flex-start; }
 
-/* Edge shades and arrows appear only where there is more to see. */
-.kanban-edge {
-  position: absolute;
-  inset-block: 0 3.25rem;
-  inline-size: 3.5rem;
-  z-index: 4;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--dur-base) var(--ease-out);
-}
-.kanban-edge-start { inset-inline-start: 0; background: linear-gradient(to right, color-mix(in srgb, var(--abyss) 85%, transparent), transparent); }
-.kanban-edge-end { inset-inline-end: 0; background: linear-gradient(to left, color-mix(in srgb, var(--abyss) 85%, transparent), transparent); }
-.kanban-edge[data-shown] { opacity: 1; }
-.kanban-edge {
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
-  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
-}
+/* Arrows appear only where there is more to see. */
 .kanban-arrow {
   position: absolute;
   inset-block-start: 45%;
@@ -883,7 +873,6 @@ dialog.nav-drawer::backdrop { background: rgb(5 20 25 / 0.55); }
 .kanban-dock-count { font-variant-numeric: tabular-nums; font-size: 0.75rem; opacity: 0.8; }
 @media (pointer: coarse) { .kanban-dock-chip { min-block-size: 2.75rem; } }
 @media (forced-colors: active) {
-  .kanban-edge { display: none; }
   .kanban-dock-chip[data-in-view] { outline: 2px solid Highlight; }
 }
 @media (width >= 48rem) {
@@ -1294,4 +1283,44 @@ html { scrollbar-color: color-mix(in srgb, var(--seaglass) 40%, transparent) tra
 .sidebar-tide {
   translate: 0 calc((1 - var(--tide-level, 0.6)) * 3.5rem);
   transition: translate 1.2s var(--ease-out);
+}
+
+/* ==========================================================================
+   Board progress liquid (R46): water in the row, level = share of cards in the last column
+   ========================================================================== */
+.board-liquid {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+.board-liquid-fill {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: calc(var(--progress, 0) * 100%);
+  background: linear-gradient(to top, oklch(0.74 0.11 var(--board-hue, 170) / 0.3), oklch(0.74 0.11 var(--board-hue, 170) / 0.14));
+  transition: block-size 700ms var(--ease-out);
+}
+.board-liquid-wave {
+  position: absolute;
+  inset-inline-start: 0;
+  inline-size: 200%;
+  block-size: 0.375rem;
+  inset-block-end: calc(var(--progress, 0) * 100% - 1px);
+  fill: oklch(0.74 0.11 var(--board-hue, 170) / 0.14);
+  transition: inset-block-end 700ms var(--ease-out);
+}
+.board-liquid[data-full] .board-liquid-wave, .board-liquid[data-empty] .board-liquid-wave { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .board-liquid-wave { animation: liquid-drift 6s linear infinite; }
+}
+@keyframes liquid-drift { to { translate: -50% 0; } }
+.board-liquid[data-full] .board-liquid-fill {
+  background: linear-gradient(to top, oklch(0.74 0.11 var(--board-hue, 170) / 0.34), oklch(0.74 0.11 var(--board-hue, 170) / 0.2));
+}
+@media (forced-colors: active) {
+  .board-liquid { display: none; }
 }
