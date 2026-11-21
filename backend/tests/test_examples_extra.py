@@ -128,3 +128,26 @@ def test_order_values_must_be_json_numbers(client, owner):
     assert client.patch(reorder, json={"columns": [{"id": owner["todo"]["id"], "order": "5"}]}, headers=owner["headers"]).status_code == 400
     assert client.patch(reorder, data='{"columns": [{"id": "%s", "order": NaN}]}' % owner["todo"]["id"],
                         content_type="application/json", headers=owner["headers"]).status_code == 400
+
+
+def test_missing_settings_explain_how_to_fix_them_on_render(monkeypatch):
+    import pytest
+
+    from app import create_app
+    from app.config import TestConfig
+
+    class NoSecret(TestConfig):
+        JWT_SECRET_KEY = ""
+
+    with pytest.raises(RuntimeError, match="On Render: open the service > Environment"):
+        create_app(NoSecret)
+
+    class Deployed(TestConfig):
+        TESTING = False
+
+    monkeypatch.setenv("RENDER", "true")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    with pytest.raises(RuntimeError, match="DATABASE_URL is not set on Render"):
+        create_app(Deployed)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h:5432/d")
+    create_app(Deployed)   # configured: starts normally

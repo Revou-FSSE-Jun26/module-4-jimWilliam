@@ -1,4 +1,6 @@
 """RevoTask Flask application factory."""
+import os
+
 from flask import Flask
 from flask_cors import CORS
 from sqlalchemy import event
@@ -21,7 +23,19 @@ def create_app(config_object=Config) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_object)
     if not app.config.get("JWT_SECRET_KEY"):
-        raise RuntimeError("JWT_SECRET_KEY is not set. Copy .env.example to .env and fill it in.")
+        raise RuntimeError(
+            "JWT_SECRET_KEY is not set. "
+            "Locally: copy backend/.env.example to backend/.env and fill it in. "
+            "On Render: open the service > Environment and add JWT_SECRET_KEY (a long random string), "
+            "or create the service with New > Blueprint so render.yaml generates it."
+        )
+    # On Render there is no .env file: without DATABASE_URL the app would silently use a throwaway
+    # SQLite file that disappears on every deploy. Render sets RENDER=true on every service.
+    if os.environ.get("RENDER") and not os.environ.get("DATABASE_URL") and not app.config.get("TESTING"):
+        raise RuntimeError(
+            "DATABASE_URL is not set on Render. Open the service > Environment and add the Supabase "
+            "session pooler URL (port 5432, ending in ?sslmode=require)."
+        )
     # Fail fast on untouched .env.example values: a placeholder host makes every database call hang.
     if "@HOST:" in app.config["SQLALCHEMY_DATABASE_URI"] or app.config["JWT_SECRET_KEY"] == "change-me-to-a-long-random-string":
         raise RuntimeError(
