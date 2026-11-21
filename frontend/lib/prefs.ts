@@ -10,7 +10,7 @@ export interface Prefs {
 }
 
 export const PREFS_COOKIE = "revotask_prefs";
-export const DEFAULT_PREFS: Prefs = { theme: "system", animateBg: false, reduceTransparency: false, sidebarCollapsed: false };
+export const DEFAULT_PREFS: Prefs = { theme: "system", animateBg: true, reduceTransparency: false, sidebarCollapsed: false };
 
 const THEMES: readonly Theme[] = ["system", "light", "dark"];
 

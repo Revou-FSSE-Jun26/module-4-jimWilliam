@@ -213,6 +213,13 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Why:** the project owner asked for a cleaner board, a fix for the double scrollbar on all pop-ups, dragging in the column settings, a colour picker, deadlines, a collapsible sidebar and slower, smoother entrances. Two choices differ from the literal request: the "+" opens a small dialog rather than Board settings, because settings are admin-only and members must still be able to add columns; and a custom colour keeps only its hue, because a free colour (white, near-black) could make the dot, liquid and text unreadable. Notifications for due dates are left out: the API runs as serverless functions with no scheduler, so "due tomorrow" cannot be sent on time without an extra service.
 - **Refinement prompt:** "Remove the add-column form from the board or make it a + that leads to settings. Why are there two scrollbars in Board settings? Make all pop-ups responsive. Let me drag columns in settings. Add a colour picker. Add deadlines to cards and boards. Can the sidebar collapse? Make the one-by-one entrance slower and smoother."
 
+### 27. Visible background motion, on by default, and the BRD (project owner's request)
+
+- **Before (R37.11, design "App_Background"):** the background was static by default; when "Animate background" was on, the light pools drifted 3–4% over 60 s, which looked still. There was no business-level document tying the brief and the owner's requests together.
+- **After:** R37.11 now animates by default: the pools wander and scale over 26 s and the caustic lines flow over 48 s (compositor-only), still paused by the toggle and by reduced motion. `docs/brd/BRD-RevoTask.md` records objectives, scope, 31 business requirements traced to R1–R53, non-functional requirements, 14 key decisions, every owner request and its outcome, risks and open items; `docs/brd/BRD-template.md` is the blank version with the questions to settle early.
+- **Why:** the owner could not see any animation and asked for it to be on by default, and asked for a BRD to reuse on later projects. Markdown was chosen over Word so the BRD is versioned with the code, reviewable in pull requests and readable by AI tools.
+- **Refinement prompt:** "What does Animate background do? I don't see any animation; make it on by default. Make the BRD of this project, including what I asked in this chat, so I can reuse it for other projects. Update the README."
+
 ---
 
 ## v5 — Template for the next round

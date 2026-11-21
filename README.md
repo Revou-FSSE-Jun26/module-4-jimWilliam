@@ -57,17 +57,20 @@ A Trello-like task manager with a "sea glass" interface, built through a discipl
 - [Deploy](#deploy)
 - [Project structure](#project-structure)
 - [Project documents](#project-documents)
+- [Reuse the BRD for your next project](#reuse-the-brd-for-your-next-project)
 
 ## Overview
 
-RevoTask lets a team plan work on boards. Members create columns and cards, move cards by drag and drop (or with a "Move to" control on touch screens), discuss work in card comments, and follow the cards assigned to them. Board admins also manage who can access a board and watch progress through analytics and notifications.
+RevoTask lets a team plan work on boards. Each board says what it is for and when it is due, and shows its progress as a level of liquid in the sidebar. Members create columns and cards, move cards by drag and drop (or with a "Move to" control on touch screens), format descriptions, attach images, set due dates, discuss work in comments, and follow the cards assigned to them. Board admins also configure the board, manage who can access it and watch progress through analytics and notifications.
+
+The business view (objectives, scope, every requirement and decision, and each change requested during the build) is in the [Business Requirements Document](docs/brd/BRD-RevoTask.md).
 
 It has two parts, both on Vercel: a **Flask REST API** backed by **Supabase PostgreSQL**, and a **Next.js** app with a glassmorphism interface.
 
 | Role | What they can do |
 |---|---|
-| **Board member** | View the board, create, edit, move and delete columns and cards, assign cards, comment, follow assigned cards, receive notifications |
-| **Board admin** | Everything a member can do, plus rename and delete the board, add and remove members, and see analytics |
+| **Board member** | View the board; create, edit, move and delete columns and cards; assign cards and set due dates; comment; add notes, links and photos to the board; follow assigned cards; receive notifications |
+| **Board admin** | Everything a member can do, plus set the board's purpose, deadline and colour, manage all columns from settings, rename and delete the board, add and remove members, and see analytics |
 
 ## Live demo and demo account
 
@@ -152,7 +155,7 @@ Sign in with the shared demo account to explore a board that already has columns
   <tr>
     <td valign="top">
       <h4>🪟 Sea-glass interface</h4>
-      A full-height curved glass sidebar with a lit rim and nested navigation (an icon rail on tablets and a swipeable drawer on phones), dark and light themes, and layouts tested from 320 px to 3840 px.
+      A full-height curved glass sidebar with a lit rim and nested navigation that collapses to an icon rail (automatically on tablets, by choice on wide screens; a swipeable drawer on phones). A slowly moving underwater background (pause it in the profile menu), dark and light themes, smooth staggered entrances, one-scroll dialogs that become bottom sheets on phones, and layouts tested from 320 px to 3840 px.
     </td>
     <td valign="top">
       <h4>♿ Accessible by design</h4>
@@ -167,7 +170,7 @@ Sign in with the shared demo account to explore a board that already has columns
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/login-1280-dark.png" alt="Login page with the sea-glass board illustration" /><br /><sub><b>Login</b>: the one animated moment, a card gliding to Done</sub></td>
+    <td width="50%"><img src="docs/screenshots/login-1280-dark.png" alt="Login page with the sea-glass board illustration" /><br /><sub><b>Login</b>: a card gliding to Done</sub></td>
     <td width="50%"><img src="docs/screenshots/dashboard-1280-light.png" alt="Dashboard in the light theme with a New board tile and a board tile" /><br /><sub><b>Dashboard</b> in the light "Shallows" theme</sub></td>
   </tr>
   <tr>
@@ -229,12 +232,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>26 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
+    A[Brief] --> B[Specs with Kiro] --> C[Critical review<br/>27 refinements] --> D[Steering guidelines<br/>committed first] --> E[Generate and review<br/>against guidelines] --> F[Violations fixed<br/>and documented] --> G[Tests and deployment]
 ```
 
 1. **Brief.** `specs/brief.md` sets the overview, the two user roles, the core features, the tech stack and the non-functional requirements.
 2. **Specs with Kiro.** Kiro turned the brief into `requirements.md` (EARS acceptance criteria), `design.md` and `tasks.md`. The first version is kept in `specs-history/v1/`.
-3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 26 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
+3. **Critical review and refinement.** Every AI-generated document was checked against the brief and the grading rubric, and each gap was fixed with a targeted refinement prompt. `specs/CHANGELOG.md` records all 27 refinements with a before and an after. Examples: the login token lived only in memory, so a reload logged the user out; the folder paths did not match the rubric; the two user roles were missing; search returned other users' cards.
 4. **Steering guidelines first.** `guidelines/` holds 33 rules (backend, database, frontend), each with a Rule, a Rationale and a RevoTask Example. They were committed before any code, and `scripts/check-guidelines-first.ps1` verifies that order in the git history.
 5. **Generate, then review.** Code was generated task by task with the guidelines in context, and library APIs were checked against current documentation (Context7 and the Next.js docs bundled with the package). `guidelines/ai-comparison.md` compares the same prompt with and without guidelines: 8 violations dropped to 0.
 6. **Violations documented.** `guidelines/violation-report.md` lists 6 violations found in generated code, each with the guideline it breaks and the fix.
@@ -374,20 +377,21 @@ revotask/
 ├── specs/                  brief, requirements, design, tasks, CHANGELOG
 ├── guidelines/             backend, database and frontend rules, AI comparison, violation report
 ├── backend/
-│   ├── app/blueprints/     auth · boards · columns · cards · comments · notifications · analytics · users
+│   ├── app/blueprints/     auth · boards · columns · cards · comments · notifications · analytics · users · media
 │   │                       (each with routes.py, service.py, schema.py)
+│   ├── app/common/         access checks, images (AVIF), signed media links, rich-text sanitiser
 │   ├── app/models/         SQLAlchemy models
 │   ├── migrations/         Flask-Migrate
 │   ├── scripts/            seed_demo.py, latency_check.py
 │   └── tests/              pytest + Hypothesis
 ├── frontend/
 │   ├── app/                pages, layouts, Server Actions      proxy.ts: route guard
-│   ├── components/shared/  BaseButton, BaseBadge, BaseModal
+│   ├── components/         board, layout, profile, shared (BaseButton, BaseModal, RichTextEditor, …)
 │   ├── hooks/              useDragAndDrop, useNotifications, useErrorHandler, …
 │   ├── lib/                apiClient, errors, toast, tokens, …
 │   ├── __tests__/          Jest + React Testing Library + fast-check
 │   └── e2e/                Playwright
-└── docs/                   screenshots, Postman collection, logo
+└── docs/                   BRD and template, screenshots, Postman collection, logo
 ```
 
 ## Project documents
@@ -395,12 +399,21 @@ revotask/
 | Document | What it holds |
 |---|---|
 | [`specs/brief.md`](specs/brief.md) | Overview, roles, features, tech stack, non-functional requirements, design direction |
-| [`specs/requirements.md`](specs/requirements.md) | 39 requirements with EARS acceptance criteria |
-| [`specs/design.md`](specs/design.md) | Architecture, routes, UI/UX design system, 40 correctness properties, traceability |
+| [`docs/brd/BRD-RevoTask.md`](docs/brd/BRD-RevoTask.md) | Business Requirements Document: objectives, scope, 31 business requirements traced to R1–R53, decisions, every owner request and its outcome, risks, open items |
+| [`docs/brd/BRD-template.md`](docs/brd/BRD-template.md) | The same structure, blank, with the questions to settle early on a new project |
+| [`specs/requirements.md`](specs/requirements.md) | 53 requirements with EARS acceptance criteria |
+| [`specs/design.md`](specs/design.md) | Architecture, routes, UI/UX design system, 56 correctness properties, traceability |
 | [`specs/tasks.md`](specs/tasks.md) | The implementation plan, with progress |
-| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 26 refinements, each with a before and an after |
+| [`specs/CHANGELOG.md`](specs/CHANGELOG.md) | 27 refinements, each with a before and an after |
 | [`guidelines/`](guidelines/) | Steering guidelines, the AI output comparison and the violation report |
 | [`docs/postman/`](docs/postman/) | Postman collection and environment for the deployed API |
+
+## Reuse the BRD for your next project
+
+1. Copy [`docs/brd/BRD-template.md`](docs/brd/BRD-template.md) into the new repository's `docs/brd/` folder.
+2. Answer **Appendix A** (hosting limits, files, roles, sessions, "done", dates, user content, design, accessibility, navigation, scrolling, testing, out of scope) before writing requirements. Each of these caused rework here when it was settled late.
+3. Fill sections 1–9, then write `requirements.md` and link each business requirement to the requirements that fulfil it.
+4. During the build, log every change request in section 10 and every lasting decision in section 9. [`BRD-RevoTask.md`](docs/brd/BRD-RevoTask.md) is the filled-in example.
 
 <br />
 

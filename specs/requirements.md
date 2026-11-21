@@ -539,7 +539,7 @@ The Backend is a Flask application (SQLAlchemy, Flask-Migrate, Flask-JWT-Extende
 8. WHILE a Card is being dragged, THE dragged Card SHALL show a lifted, tilted state, and the Column under the pointer SHALL show a highlighted rim and a drop placeholder.
 9. WHEN the route changes, THE Nav_Tree current-page indicator SHALL glide from the previous item to the new item.
 10. WHILE `prefers-reduced-motion: reduce` is set, THE Frontend SHALL replace movement, scaling, tilting and staggering with an opacity fade of at most 150 ms, SHALL skip View Transition morphs, and SHALL keep color and focus-ring transitions.
-11. THE App_Background SHALL be static by default; WHILE "Animate background" is on and `prefers-reduced-motion` is `no-preference`, its light layers SHALL drift slowly, and turning "Animate background" off SHALL stop the drift immediately.
+11. THE App_Background SHALL animate by default: WHILE "Animate background" is on and `prefers-reduced-motion` is `no-preference`, its light pools SHALL drift and gently scale over about 26 s and its caustic lines SHALL flow sideways over about 48 s, using compositor-only transforms. Turning "Animate background" off SHALL stop the motion immediately, and a reduced-motion setting SHALL keep it still.
 12. THE Frontend SHALL NOT show any content that flashes more than three times in any one-second period.
 
 ### Requirement 38: Responsive layout from mobile to 4K

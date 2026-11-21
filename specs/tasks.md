@@ -811,6 +811,13 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     - `__tests__/due-color-drag.test.tsx`, `e2e/due-and-collapse.spec.ts`; the Kanban journey adds columns through the "+" tile
     - _Requirements: 49.6, 49.7, 51.2, 53.2_
 
+- [x] 29. Visible background motion on by default; BRD (refinement round v4)
+  - [x] 29.1 Make the background motion noticeable (pool drift and caustic flow) and turn it on by default
+    - _Requirements: 37.11_
+
+  - [x] 29.2 Write the Business Requirements Document and a reusable template in `docs/brd/`; update the README
+    - _Requirements: 29.1_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP.
@@ -860,7 +867,7 @@ RevoTask is built in this order: specs, guidelines, a commit gate, backend, fron
     {"id": 29, "tasks": ["27.3", "27.4", "27.5", "27.6"]},
     {"id": 30, "tasks": ["27.8", "28.1", "28.5", "28.6", "28.8"]},
     {"id": 31, "tasks": ["28.2", "28.3", "28.4", "28.7"]},
-    {"id": 32, "tasks": ["28.9"]}
+    {"id": 32, "tasks": ["28.9", "29.1", "29.2"]}
   ]
 }
 ```
