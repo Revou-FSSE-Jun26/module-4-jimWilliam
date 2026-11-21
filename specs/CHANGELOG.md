@@ -228,6 +228,22 @@ Stakeholder request: a glassmorphism interface with curved glass, a strong backg
 - **Also fixed:** while re-running the suite, Hypothesis found that Property 13 failed for `"order": "1"`: marshmallow's `Float` accepts numeric strings (and the column reorder schema also accepted NaN). A `JsonNumber` field (`app/common/fields.py`) now accepts only real JSON numbers for both, with a regression test.
 - **Refinement prompt:** "I changed my mind: I will use Render for the backend and Vercel for the frontend, so we can still use Gunicorn."
 
+### 29. Faster page loads: co-located regions and per-request deduplication (project owner's request)
+
+- **Before:** Vercel ran the Next.js server functions in `iad1` (Washington, USA) by default while the API runs on Render in Singapore, so every server-side API call (session, sidebar boards, page data) crossed the Pacific twice. The dashboard also fetched `/api/boards` twice per load (layout and page).
+- **After:** `frontend/vercel.json` pins the functions to `sin1` (Singapore). `serverFetch` and `getSessionUser` go through React's `cache()`, so identical API calls within one server request are made once. No API-side response cache was added.
+- **Why:** the owner asked for an API cache for faster loading. Measuring first showed the delay was distance, not the API: `/api/health` answered in about 0.1 s, while `x-vercel-id` showed the functions in `iad1`. A shared response cache in Flask would add stale-data and permission risks (two Gunicorn workers, per-user data) for a few milliseconds of database time; the per-request cache has neither risk. Remaining factors: the free Render instance sleeping after 15 idle minutes, and the Supabase project's region (best in Singapore, `ap-southeast-1`).
+- **Refinement prompt:** "Can you add an API cache for faster loading?"
+
+### 30. Dependency updates (project owner's request)
+
+- **Updated:** Gunicorn 23 → 27.0.1 (`backend/requirements.txt`: `>=27.0.1,<28`), Hypothesis 6.170.17 (within its range), React and React DOM 19.3.0 → 19.3.1, Tailwind CSS and `@tailwindcss/turbopack` 4.3.3 → 4.3.5, TypeScript 5.9 → 6.0.3, `@types/node` 20 → 26, and `"engines": { "node": "26.x" }` in `frontend/package.json`.
+- **ESLint 9 → 10.15.0, verified rather than assumed:** `eslint-config-next` 16.4.6 bundles `eslint-plugin-react`, `eslint-plugin-import` and `eslint-plugin-jsx-a11y`, whose peer ranges stop at ESLint 9. A trial on a copy of the project showed ESLint 10 reporting exactly the same findings as ESLint 9 on a probe file that breaks rules from every plugin (react, react-hooks, jsx-a11y, import, Next.js), the codebase passing cleanly, a clean `npm ci` succeeding and the build compiling. `package.json` `overrides` now state that those three plugins run on the project's ESLint (`"eslint": "$eslint"`), which removes the peer warnings.
+- **Held back, with reasons:** TypeScript stays on 6.0.3. In the same trial TypeScript 7 type-checked, built (type-checking in 0.7 s instead of about 13 s) and passed all 131 tests, but ESLint stopped with "typescript-eslint does not support TS 7.0" (support is tracked for TS 7.1 or later). Microsoft's side-by-side scheme keeps `typescript` on 6.x for such tools and installs 7.x under another name, which only adds a second fast compiler; upgrade once `typescript-eslint` supports TypeScript 7. `@types/node` follows the Node version the Vercel project builds and runs with (26.x, confirmed by the owner), and `engines` pins it so local and deployed Node match.
+- **Checked (Context7):** Gunicorn 24–27 breaking changes are the removed `eventlet` worker (26.0) and the rejection of requests whose `Transfer-Encoding` does not end in `chunked` (27.0); RevoTask uses `gthread` and browsers send `Content-Length`, so neither applies. TypeScript 6.0 changes defaults (`types: []`, `strict`, `rootDir`) and deprecates `baseUrl`, `moduleResolution node` and `target es5`; the existing `tsconfig.json` already uses `bundler` resolution with no `baseUrl` and type-checks cleanly.
+- **Verified:** 147 backend tests, 131 frontend tests, ESLint 10, `tsc`, the production build, a clean `npm ci` and all 17 Playwright tests pass.
+- **Refinement prompt:** "Update all requirements if needed (use Context7)."
+
 ---
 
 ## v5 — Template for the next round

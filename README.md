@@ -23,7 +23,7 @@ A Trello-like task manager with a "sea glass" interface, built through a discipl
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
 [![Render](https://img.shields.io/badge/API_on-Render-46E3B7?style=flat-square&logo=render&logoColor=white)](https://render.com)
 [![Vercel](https://img.shields.io/badge/App_on-Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
-[![Gunicorn](https://img.shields.io/badge/Gunicorn-23-499848?style=flat-square&logo=gunicorn&logoColor=white)](https://gunicorn.org)
+[![Gunicorn](https://img.shields.io/badge/Gunicorn-27-499848?style=flat-square&logo=gunicorn&logoColor=white)](https://gunicorn.org)
 
 [![pytest](https://img.shields.io/badge/pytest-112_passed-2E7D74?style=flat-square&logo=pytest&logoColor=white)](#run-the-tests)
 [![Jest](https://img.shields.io/badge/Jest-97_passed-2E7D74?style=flat-square&logo=jest&logoColor=white)](#run-the-tests)
@@ -59,7 +59,6 @@ A Trello-like task manager with a "sea glass" interface, built through a discipl
 - [Deploy](#deploy)
 - [Project structure](#project-structure)
 - [Project documents](#project-documents)
-- [Reuse the BRD for your next project](#reuse-the-brd-for-your-next-project)
 
 ## Overview
 
@@ -251,7 +250,7 @@ flowchart LR
 ## Run it locally
 
 > [!TIP]
-> You need **Python 3.12+**, **Node.js 20+** and **PostgreSQL** (SQLite also works for a quick start).
+> You need **Python 3.12+**, **Node.js 26** (the version Vercel builds with, pinned in `frontend/package.json` `engines`) and **PostgreSQL** (SQLite also works for a quick start).
 
 ```bash
 git clone <your-repo-url> revotask
@@ -294,7 +293,7 @@ Then sign in with the [demo account](#live-demo-and-demo-account).
 
 | Suite | Command | What it covers | Result |
 |---|---|---|---|
-| **Backend** | `cd backend && pytest -v` | Every route and error status, plus 32 Hypothesis properties | ✅ 145 passed |
+| **Backend** | `cd backend && pytest -v` | Every route and error status, plus 32 Hypothesis properties | ✅ 147 passed |
 | **Frontend** | `cd frontend && npm test` | Components, pages and hooks, plus 21 fast-check properties | ✅ 131 passed |
 | **End to end** | `cd frontend && npx playwright test` | 4 auth scenarios, the 8-step Kanban journey, photo and image uploads, the full-height board and clock, board settings and About, due dates and the collapsible sidebar, layouts at 7 widths, axe scans | ✅ 17 passed |
 
@@ -375,7 +374,7 @@ RevoTask runs on three services: **Supabase** (PostgreSQL), **Render** (the Flas
 <details open>
 <summary><b>3. Next.js app on Vercel</b></summary>
 
-1. Create a Vercel project from this repository with the **root directory set to `frontend`**.
+1. Create a Vercel project from this repository with the **root directory set to `frontend`**. [`frontend/vercel.json`](frontend/vercel.json) runs its server functions in **Singapore (`sin1`)**, next to the Render API, because every server-rendered page calls the API; if your Render service is in another region, change `regions` to the closest Vercel region.
 2. Set `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL` to the Render API URL (`https://<your-api>.onrender.com`; for this project `https://revou-checkpoint-04.onrender.com`).
 3. Deploy, then set `FRONTEND_ORIGIN` on the Render service to the Vercel URL and redeploy the API.
 4. Run the Playwright suite against the live URLs and commit `frontend/playwright-report/`.

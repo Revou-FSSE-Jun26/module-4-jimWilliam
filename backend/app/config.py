@@ -49,7 +49,8 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = engine_options(SQLALCHEMY_DATABASE_URI)
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=float(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_HOURS", "24")))
-    FRONTEND_ORIGINS = [o.strip() for o in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",") if o.strip()]
+    # A browser's Origin never ends in "/", so "https://app.vercel.app/" would never match: strip it.
+    FRONTEND_ORIGINS = [o.strip().rstrip("/") for o in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",") if o.strip()]
     JSON_SORT_KEYS = False
     # Image uploads: 4 MB keeps the database small (images are stored in PostgreSQL) and matches the
     # frontend's check in lib/upload.ts.

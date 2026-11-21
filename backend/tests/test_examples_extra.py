@@ -151,3 +151,17 @@ def test_missing_settings_explain_how_to_fix_them_on_render(monkeypatch):
         create_app(Deployed)
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h:5432/d")
     create_app(Deployed)   # configured: starts normally
+
+
+def test_frontend_origin_with_trailing_slash_still_allows_cors(monkeypatch):
+    import importlib
+
+    import app.config as config
+
+    monkeypatch.setenv("FRONTEND_ORIGIN", "https://jwrevotask.vercel.app/, http://localhost:3000")
+    reloaded = importlib.reload(config)
+    try:
+        assert reloaded.Config.FRONTEND_ORIGINS == ["https://jwrevotask.vercel.app", "http://localhost:3000"]
+    finally:
+        monkeypatch.delenv("FRONTEND_ORIGIN")
+        importlib.reload(config)
